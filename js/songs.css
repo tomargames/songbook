@@ -1,0 +1,306 @@
+body
+{
+	background-color: #eee;
+	color: black;
+	font-family: 'Didact Gothic';
+	font-size: 16px;
+}
+*
+{
+  box-sizing: border-box;
+}
+input
+{
+  background-color: azure;
+  font-weight: bold;
+  font-size: 1.1em;
+  border-radius: 5px;
+}
+select
+{
+  background-color: azure;
+  font-size: 1.0em;
+}
+table
+{
+  font-size: 1.1em;
+}
+.smallmodal 
+{
+  display: none; /* Hidden by default */
+  position:  fixed;
+  z-index: 1; /* Sit on top */
+  padding-top: 5px; /* Location of the box */
+  left: 300;
+  top: 15;
+  width: 60%; /* Full width */
+  height: 75%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.modal 
+{
+  display: none; /* Hidden by default */
+  position: fixed; /* Stay in place */
+  z-index: 1; /* Sit on top */
+  padding-top: 1px; /* Location of the box */
+  left: 0;
+  top: 0;
+  width: 100%; /* Full width */
+  height: 100%; /* Full height */
+  overflow: auto; /* Enable scroll if needed */
+  background-color: rgb(0,0,0); /* Fallback color */
+  background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+}
+.modal-content 
+{
+  background-color: #EEE;
+	font-size: 1em;
+	font-weight: bold;
+  margin: auto;
+  padding: 1px;
+  border: 1px solid #888;
+  width: 98%;
+}
+.close 
+{
+  position: sticky;
+  bottom: 0;
+  left: 0;
+  color: white;
+  float: left;
+  font-size: 16px;
+  padding: 0;
+  font-weight: bold;
+  background-color: gray;
+}
+.close:hover,
+.close:focus 
+{
+  color: #000;
+  text-decoration: none;
+  cursor: pointer;
+}
+.onPanel
+{
+	color: navy;
+	background-color: lavender;
+	font-size: 1em;
+}
+.chart
+{
+  filter: drop-shadow(5px 5px 4px #aaa);
+  text-align: left;
+}
+.chartMeta
+{
+	color: beige;
+	background-color: #333;
+  font-weight: bold;
+  font-size: 1.1em;
+  padding: 5px;
+}
+.chartMeta.sz90
+{
+  font-size: 1em;
+}
+.chartMeta.sz80
+{
+  font-size: .9em;
+}
+.chartMeta.sz70
+{
+  font-size: .8em;
+}
+.chartMeta.sz60
+{
+  font-size: .7em;
+}
+.chartMeta.sz65
+{
+  font-size: .75em;
+}
+.chartMeta.sz55
+{
+  font-size: .65em;
+}
+.chartText
+{
+	color: black;
+  font-weight: bold;
+  font-size: 1em;
+}
+.chartText.sz90
+{
+  font-size: .9em;
+}
+.chartText.sz80
+{
+  font-size: .8em;
+}
+.chartText.sz70
+{
+  font-size: .7em;
+}
+.chartText.sz60
+{
+  font-size: .6em;
+}
+.chartText.sz65
+{
+  font-size: .65em;
+}
+.chartText.sz55
+{
+  font-size: .55em;
+}
+.chartText.noChart
+{
+  font-weight: normal;
+}
+.chartMusic:hover
+{
+	color: navy;
+}
+.chartMusic
+{
+	color: black;
+  font-weight: bold;
+  font-size: 1.1em;
+  padding: 1;
+  border: 1px solid #AAA;
+  border-radius:12px;
+}
+.chartMusic.error
+{
+  border: none;
+  color: red;
+}
+.chartMusic.token
+{
+  border: none;
+  color: darkcyan;
+}
+.chartMusic.sz90
+{
+  font-size: 1em;
+}
+.chartMusic.sz80
+{
+  font-size: .9em;
+}
+.chartMusic.sz70
+{
+  font-size: .8em;
+}
+.chartMusic.sz60
+{
+  font-size: .7em;
+}
+.chartMusic.sz65
+{
+  font-size: .75em;
+}
+.chartMusic.sz55
+{
+  font-size: .65em;
+}
+.NTinput
+{
+  font-size: 1em;
+  font-weight: bold;
+}
+.reviewTitle
+{
+  color: darkslateblue;
+  background-color: #ddd;
+  font-size: 2em;
+  font-weight: bold;
+}
+.message
+{
+    font-size: 1.1em;
+}
+.button 
+{
+	border: none;
+	padding: 1px 6px;
+	text-align: center;
+	text-decoration: none;
+	display: inline-block;
+	margin: 4px 2px;
+	cursor: pointer;
+	font-size: 1em;
+	background-color: lavender;
+}
+.noteButton
+{
+  text-align: left;
+  cursor: pointer;
+  font-weight: normal;
+  border: none;
+  background-color: #DDD;
+}
+.pnlButton
+{
+  background-color:azure;
+  color: black;
+  font-size: 0.6em;
+}
+.pnlButton:hover,
+.pnlButton:focus 
+{
+  text-decoration: none;
+  cursor: pointer;
+}
+.pnlButton:disabled
+{
+  background-color:#ccc;
+}
+.pnlButton.user
+{
+  background-color: #aaa; 
+}
+.tagButton
+{
+  background-color: green;
+  color: white;
+  font-size: 0.75em;
+}
+.songDetail
+{
+  background-color: #EEE;
+  color: #000;
+  text-align: left;
+	padding: 2px;
+	font-size: 1em;
+	font-weight: bold;
+}
+.songDetail.header
+{
+  background-color: #ddd;
+}
+.songDetail.button
+{
+  background-color: #ccc;
+}
+.songDetail.button:hover,
+.songDetail.button:focus
+{
+  background-color: lightyellow;
+}
+.songDetail.highlight
+{
+  background-color: #eee;
+}
+.songDetail.highlight:hover,
+.songDetail.highlight:focus
+{
+  background-color: lightyellow;
+}
+.bgButton
+{
+	background-color: #ccc;
+}
+
