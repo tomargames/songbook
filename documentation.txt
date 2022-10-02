@@ -1,0 +1,1110 @@
+Release log
+	2022/09
+		file list:
+			songbook/programs/reports.py - 9/21
+			songbook/js/reports.js - 9/21           --------> new
+			songbook/js/reports.css - 9/21           --------> new
+			songbook/data/constants.json - 9/21, 9/24
+			songbook/js/songbook.js - 9/01, 9/11
+			songbook/metronome/metronome.js - 9/07
+			songbook/programs/Songs.py - 9/07, 9/08, 9/11, 9/12, 9/24, 9/25
+			songbook/programs/index.py - 9/08
+		included:
+			09/25: bug: not producing all the pdfs
+			09/24: added some emojis, just cosmetic stuff
+			09/21: reports page, write data to js, then pull in reports.js
+			09/12: create pdfs as part of the updateReview process
+			09/11: only validate the schedule date to be a future date if it has actually changed
+			09/08: shifted things around on edit screen
+			09/07: shifted things around on edit screen
+			09/01: validation so you can't schedule for a date in the past
+	Things to work on:
+		Metronome:
+			accent string 
+			make metrnomome info part of set info
+			think about counting measures in a set, and adding it to set data 
+		Reports:
+		Music:
+		--> test case bluesette, trying to get meter in3
+		--> run conversion, spin off BPM tag to new metronome field {bpm: 090, meter: ABABABABB, res: 2(// 0 == 16th, 1 == 8th, 2 == quarter note)}
+		--> tom cat goodbye, ? chord and need to finish chart
+		--> razor boy -- could be in Gb rather than F# so it can be in Ebm
+		--> change the display that you get when it substitutes an accidental to a property on the songcode record in the usage file, when you redo a chart, you first remove each reference to that song in the usage file, then redo the chart with references to the new chords
+		--> triple-stack notes, you've got a friend, somewhere test cases
+		--> double=stack notes, hymn of axcion outro
+		--> unevenness of lines in columns, it's too late test case at the piano
+		--> redo key signatures on haven't we met test case, why Bm7 and Cbm7 both
+		--> every little thing she does chords
+		views: LIST for role U: TT, DK, TG(summary), TM, SB, LL -- TG will display detail on hover, TT will link to chart is CS == 0 or 1 
+			   LIST for role O: TT, DK, TG(summary), TM, SB, LL -- TG will display detail on hover, TT add hover to include RN, RL, RA, RT, CD, and CS	
+			   DETAIL will keep Save, Chart, History, Copy, Import, Display all review notes, and review options
+		throw it away, need to do minor keys so it's C#m instead of Dbm
+		add a keyword for modulation, figure that stuff out, downtown is testcase, i'd rather be blue, my cherie amour
+		things not working: double music line, N in pattern for single notes
+		do thumbnail during updateReview process, or maybe live during getNote?
+		chords and help screens in modal or better, make a page for it that you bring up in a new tab
+		highlight title in displaySong even in owner role if there's a chart, revamp what displays on hover
+		* add setting for sort of due cards to config.json
+		* redo panel where decks are displayed -- make them listed on the left with other things in there too
+		back-end music process in updateReviewFile -- tokenize lyric words and chord bits to make stats on similarity among sets in a song, send back analytics
+		setting button open a tab in online json editor
+		add accidentals (#, aug, etc) to settings file?
+		put chart status on review panel
+		HISTORY BUG if you change same tag on same day
+		keyword for vocalizing 
+		keyword for second music line
+		tailor max columns to screen size
+		history report, add days scheduled to the display
+		and that will have a top line for first and second endings and shit
+		put special character glossary in settings file
+		include all the terms, description, in and out, and then use it to feed a js display
+		addTag move, just make one for each that appears when you +
+		dictionary/glossary of expressions created, like diminished, augmented, major seventh, inversions, etc
+		*** put history stuff in dropdowns, no selection, just use it to browse
+		*** do it for tag browsing, too, and include how many cards have that tag, sort by it
+		*** move people column to the left
+		History:
+			add/edit history notes, spawn a new tab to do it
+			add note to history, will bring up history with notes field
+			add option to suspend card to inactive
+		Display:
+			bug: colors don't match between tag header and tag -- detail line is correct color, headers are off on Owner role only
+			make 'due' for each deck a link with appropriate query
+			pre-fill the tag ctg code in the input, make it separate from rest of tag, display then add
+		Other decks:
+			copy from one repository to another if you're owner on both
+		Settings:
+			add deck color to settings
+			make a template config.json file for new owners
+			edit configuration file and user list
+		Timer:
+			timer button to populate the field after timing
+			make time field next to timer clock which can update it
+			and have a separate clock running during review
+		Metronome:
+			spin BPM tag into its own field, ultimately tied to metronome
+Release log
+	2022/08
+		file list:
+			songbook/programs/reports.py - 8/09, 8/31              ---------> new
+			songbook/programs/index.py - 8/19, 8/24, 8/31
+			songbook/programs/Songs.py - 8/09, 8/19, 8/24, 8/26, 8/29
+			songbook/programs/getNote.py 
+			songbook/programs/chordPalette.py - 8/08
+			songbook/js/songbook.js - 8/09, 8/10, 8/19, 8/20, 8/24, 8/26
+			songbook/js/songs.css - 8/26, 8/29
+			songbook/data/constants.json - 8/09, 8/24, 8/26
+			songbook/data/*/songbook.json for marie, marieNme, lucas, chris, miranda, thoryvo - 8/24
+			songbook/metronome/metronome.js - 8/19, 8/20, 8/24
+			songbook/metronome/metronomeworker.js - 8/19
+			songbook/metronome/clave.mp3 - 8/19				----------> new
+		included:
+			08/31: remove randRange(9999) from all page loads (had prevented caching of js and css files)
+			08/29: shortened length of URL fields (LL and SB) on edit screen
+			08/26: putting in validation and a dropdown box for metronome settings
+			08/24: conversion on songbook.json for all repositories, adding MT field: {bpm, noteResolution, accentPattern}
+			08/20: more playing with metronome, displays for saving from edit screen (bug: due date reschedule doesn't always take from there)
+			08/19: switching to chris's metronome
+			08/10: recovery from 8/9 implementation -- had bad copy of songbook.js
+			08/09: first implementation of reports page, does nothing yet
+			08/08: BUG:chordPalette.py, weird characters for diminished chords, ubuntu only, tom fixed by detecting when on localhost and coding it differently
+	2022/07
+		file list:
+			songbook/programs/index.py - 7/03, 7/07, 7/11
+			songbook/programs/Songs.py - 7/04, 7/07, 7/11, 7/12, 7/14, 7/18, 7/23
+			songbook/programs/getNote.py - 7/12
+			songbook/programs/chordPalette.py - 7/20, 7/23, 07/28          	-------> new
+			songbook/js/songbook.js - 7/07, 7/11, 7/12, 7/14, 7/16, 7/23, 7/26
+			songbook/js/songs.css - 7/01, 7/03, 7/11, 7/12, 7/18
+			songbook/data/constants.json - 7/07
+			songbook/metronome/metronome.js - 7/07				-------> new
+			songbook/metronome/*.* - 7/07						-------> new, copied code from cwilso --> https://github.com/cwilso/metronome
+		included:
+			07/28: added header and footer to chordPalette.py, coordinated release in tomar folder
+			07/26: BUG: import chart not working correctly
+			07/23: BUG: copy and add card no longer working since new format
+			07/20: starting work on chordPalette.py
+			07/18: switched some css classes on buttons
+			07/16: ERROR: request URI too long on bear and otter - trying javascript intercept
+			07/14: added last done date to hover display, request URI too long -- catch error message and display alert
+			07/12: playing around with tempoButton placement 
+			07/11: action buttons normalization
+			07/07: metronome
+			07/04: BUG: index error on decks, make it not happen no matter what
+			07/03: bug in edit page with RN date -- ugly fix, but it seems to work, added hover pseudoclass for scheduling buttons
+			07/01: add a cancel button to edit screen, capture list html to put back if cancelled
+	2022/06
+		file list:
+			songbook/js/songs.css - 6/2, 6/21, 6/25, 7/01
+			songbook/js/songbook.js - 6/2, 6/6, 6/7, 6/21, 6/25, 6/28, 7/01
+			songbook/programs/Songs.py - 6/2, 6/3, 6/6, 6/7, 6/9, 6/11, 6/21, 6/25, 7/01
+			songbook/programs/getNote.py - 6/2, 6/3, 6/7, 6/21
+			songbook/programs/index.py - 6/21
+			songbook/data/constants.json - 6/21
+			songbook/data/musicConstants.json - 6/1, 6/3
+			songbook/data/codeDB.json - 6/1
+			songbook/data/chordDB.json - 6/1
+			songbook/data/*/chordUsage.json for marie, marieNme, lucas, chris, miranda, thoryvo - 6/07
+		included:
+			07/01: add a cancel button to edit screen, capture list html to put back if cancelled
+			06/28: changed workflow -- closing chart brings up detail -- in place in production
+			06/28: fixed bug in "next page" chart display -- fixed in place in production
+			06/25: disable detail link when in edit mode
+			06/25: add elapsed days into detail modal
+			06/21: redesign of list of songs implemented from songbook22 on 6/14, and continued here
+			06/11: big monitors and phone are size 60, but tablet landscape will be 70
+			06/09: {chord: [{songId:[{set, line, cell}, {songId...}]}] instead of adding 1 to a counter
+			06/07: process reviewCharts record when it's created into usage for chords
+			06/07: removed "longest" from displayChart call
+			06/07: add chordUsage for each repository
+			06/07: better message for invalid keyword err5, goose snow cone
+			06/07: add scrollTo for selectRange on chart edit`
+			06/06: selectRange accuracy, not about love test case -- last set keeps getting 999 instead of offset, start here
+			06/03: 7dim9, [0, 4, 7, 10, 1] wouldn't it be good test case
+			06/02: add EOF to end of chart telling you it's the last page, otherwise changt 'close' to 'next page'
+			06/02: added edit link on metaline to close modal, put you into the NT field, and highlight the set you want to edit
+			06/01: 9M6 --> stoned soul picnic
+	2022/05
+		file list:
+			songbook/js/songs.css - 5/15, 5/26, 5/31
+			songbook/js/songbook.js - 5/7, 5/8, 5/15, 5/20, 5/24, 5/30, 5/31
+			songbook/programs/Songs.py - 5/7, 5/10, 5/14, 5/15, 5/20, 5/21, 5/24, 5/25, 5/30, 5/31
+			songbook/programs/getNote.py - 5/20, 5/24
+			songbook/data/constants.json - 5/7, 5/10, 5/21
+			songbook/data/musicConstants.json - 5/10, 5/11, 5/13, 5/22, 5/25, 5/26
+			songbook/data/codeDB.json - 5/10, 5/11, 5/13, 5/22, 5/26
+			songbook/data/chordDB.json - 5/10, 5/11, 5/13, 5/22, 5/26
+			songbook/data/thoryvo/config.json - 5/16
+			songbook/data/*/songBook.json for marie, marieNme, lucas, chris, miranda, thoryvo - 5/21
+		included:
+			5/31: replaced document.getElementById with $, eliminated flashing screen on chart
+			5/30: bug in if i fell, need to return Fb for E, and bug in import chart function
+			5/26: make close button not scroll, added some chords
+			5/25: sus to s in musicConstants
+			5/25: EOF bug on chart
+			5/24: i was a fool to care, fill up with one page, with button to go to next page
+			5/22: chordType 7m9s4 should have template 0 5 7 10 1
+			5/22: 13 chord for can we still be friends
+			5/22: chord for empty fifths, called 05, message in a bottle
+			5/22: mm6, message in a bottle
+			5/21: follow up on removing COLUMN meta stuff
+			5/21: follow up on removing SIZE meta stuff
+			5/20: changing chart display to figure out columns and scrolling based on screen dimensions
+			5/16: config changes for thoryvo 
+			5/15: add anothe close at the end of the chart -- not ideal, but will do for now
+			5/14: if not on PC, set size to 60
+			5/13: adding 7m9s4 to chordTypes, but not for me is testcase
+			5/11: BUG: Weasel - somehow has an orphan harmonica tag on it ---> removed bad record from songBook.json and uploaded
+			5/11: Add Gm7s6 -- does everyone stare
+			5/11: Add As2m6 -- jonathan 
+			5/10: NEED bluesette, G7-5  F7-5   in outro -- add "-" to js cleanup, change to b, but add to codeDB as 7-5 chord, so new chordType
+			5/10: NEED TO ADD the ADDED interval to the chord notes so inversions work - at Seventeen, doing away with "add" as a thing
+			5/8: bug: + on the input, not about love test case
+			5/7: force default deck display for U role
+			5/7: push screen width < 1500 to "mobile" which will default chart to one column
+	2022/04
+		file list:
+			songbook/js/songs.css - 4/23
+			songbook/js/songbook.js - 4/9, 4/15
+			songbook/data/musicConstants.json - 4/22, 4/25, 4/29
+			songbook/data/constants.json - 4/12, 4/22
+			songbook/data/codeDB.json - 4/15, 4/22, 4/25, 4/28
+			songbook/data/chordDB.json - 4/15, 4/22, 4/25, 4/28
+			songbook/data/*/songBook.json for marie, marieNme, lucas, chris, miranda, thoryvo - 4/12
+			songbook/programs/index.py - 4/12
+			songbook/programs/getNote.py - 4/15, 4/29
+		included:
+			4/30: BUG: left two accidentals out of the accidental list in Songs.py 
+			4/29: BUG: you can close your eyes in role Uthoryvo doesn't highlight, but chart is fine
+			4/29: beginning work on "add" -- adding an interval to an existing chord - test case is "At Seventeen"
+			4/28: cleaned up accidentals in chordDB, much work using chordWork.py
+			4/25: added circleOfFifths to musicConstants.json, using it to determine which accidental to generate, regenerate codeDB and chordDB
+			4/23: turn tokens teal, then make ? red
+			4/22: revamp of codeDB and chordDB, addition of musicConstants.json
+			4/22: no longer using Music module at all
+			4/15: formatting chart error printing better
+			4/15: list songs with err1 chart errors
+			4/15: new versions of codeDB and chordDB
+			4/12: bug -- 2 buttons that say review and set
+			4/12: uncouple pattern from TYPE keyword -- convert all files and make new seed meta line reflecting both TYPE and PATTERN
+			4/12: add TYPE, SIZE, row type possibilities(M, T, N?) to constants
+			4/12: allow pattern to consist of 0-n M's followed by 0-n T's
+			4/9: processing bug in updateReviewHistory
+			4/9: validate new card for title and set focus to it if missing
+			4/9: add a blank metaline to NT on new card
+	2022/03
+		file list:
+			songbook/js/songs.css - 3/7, 3/15
+			songbook/js/songbook.js - 3/7, 3/15, 3/22, 3/24
+			songbook/js/*/index.py for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12
+			songbook/programs/Songs.py - 3/7, 3/9, 3/12, 3/13, 3/15, 3/16, 3/20, 3/22, 3/24, 3/30, 3/31
+			songbook/programs/index.py - 3/9, 3/22
+			songbook/programs/getNote.py - 3/22
+			songbook/programs/srchResults.py - 3/24
+			songbook/data/*/config.json for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12
+			songbook/data/*/songBook.json for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12
+			songbook/data/*/reviewDates.json for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12, 3/13
+			songbook/data/*/reviewSongs.json for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12
+			songbook/data/*/reviewCharts.json for marie, marieNme, lucas, chris, miranda, thoryvo - 3/12
+			songbook/data/admin.json - 3/12
+			songbook/data/constants.json - 3/20, 3/22
+		included:
+			3/31: back-to-back sets of same type in same column, don't put a blank line between
+			3/30: throw error for non-consecutive column designation in chart input
+			3/24: changed d to D for deck display (conflict with notation cleanUp)
+			3/24: bug - tags for key won't bring up # keys
+			3/24: Happy Together - fixed bug in chart for setting key to F#m in Mark's deck
+			3/24: Happy Together goes through okay for lucas (no transposition) but doesn't highlight in Ulucas
+			3/24: Happy Together in marieNme (transposition) gets through NTtoCH okay, but then blows on display
+			3/22: beefed up hover info to include songId
+			3/22: added role info to constants.json, and use it in adminEdit
+			3/22: add button to import chart, added var roleList array to js for validation
+			3/20: bug in updating chart status
+			3/20: display chart status field on panel
+			3/20: implemented constants.json for required fields
+			3/16: on drop-down for options, make it -------ROLES-------
+			3/15: if not O role, only make link if there's a chart
+			3/15: remove C link from list entries
+			3/15: remove 'copy from' entries on drop-down
+			3/13: bug in reviewDates creation, run fix for all repositories, and then fix process
+			3/12: creating new repositories for marieNme and lucas, chris and miranda
+			3/12: splitting decks marieNme and lucas into new repositories
+			3/12: put try catch in history report for bug
+			3/12: added deck to thoryvo for alexis
+			3/9: include repository name in <title>
+			3/9: strip whitespace around meta input line
+			3/7: limit to one column if screen width < 1000
+			3/7: left-justify table for chart
+			3/7: focus for all the possible page loads
+			3/7: restore prompt for 'leave without saving?'
+	2022/02
+		file list:
+			songbook/js/songs.css - 2/4, 2/8, 2/13, 2/14, 2/18
+			songbook/js/songbook.js - 2/23
+			songbook/programs/Songs.py - all 
+			songbook/programs/getNote.py - 2/22, 2/23, 2/28
+			songbook/data/codeDB.json - 2/18
+			songbook/data/chordDB.json - 2/18
+		included:
+			02/28: add days scheduled for to review record
+			02/28: if RL == today or revNote > '' or changeRec is changed,  review rec will be written, reflected in daysScheduled
+			02/28: add chart status field to main record - CS field, values: A, B, C, D, E
+			02/28: run conversion for all repositories and set that status
+			02/23: limit to one column for phone - backed out
+			02/23: fixed bug in instrumental lines
+			02/22: made error message include song id and title
+			02/19: made error message show input line from processNTtoCH
+			02/18: added 2mM7 to code and chordDB for At Seventeen
+			02/18: added 55% display
+			02/14: created tokens with their own css -- |, :, X 
+			02/14: lower-case TYPE parameter gives you instrumental, skips lyric lines
+			02/13: added border to chartMusic class
+			02/11: change the close to an X and make it bigger
+			02/10: addCard should set RN to current date
+			02/10: fixed bug, need to translate KEYIN and KEYOUT for special characters to get relativeMajor
+			02/08: drop-shadows, changing colors to grayscale, moved keyout to metaline display - Chris suggestions
+			02/07: hover over metaline display should show the key  
+			02/06: chord errors will get an X and not abend, just display the X and hover is ERROR 
+			02/04: applied size parameter to chartMeta lines as well 
+			02/04: added SIZE 65 
+			02/02: SIZE keyword on metaline
+	2022/01
+		file list:
+			songbook/programs/getNote.py - 1/23
+			songbook/programs/Songs.py - 1/7, 1/23
+			songbook/programs/Music.py - 1/7
+			songbook/js/songs.css - 1/7, 1/23
+			songbook/data/constants.json - 1/28
+		included:
+			01/28: added prechorus keyword to metadata
+			01/23: converted to new metaline with no pattern, add column and size and type
+			01/07: handled half-diminished symbol, added 57+5/2, added 4mM7, 7add6
+			01/07: reduce font in review panel buttons. 
+			01/07: only display chart button or link if there's a record in reviewCharts for it
+	2021/12/20
+		file list:
+			songbook/js/songs.css
+			songbook/programs/Songs.py
+		included:
+			fixed bug: ends of lyric lines getting cut off
+			meta lines different css 
+	2021/12/15
+		file list:
+			songbook/js/songbook.js
+			songbook/js/songs.css
+			songbook/programs/Songs.py
+			songbook/programs/Music.py
+		included:
+			some changes to handle augmented, diminished, and # chords
+			modulations, pattern changes, new sets of various types
+	2021/12/08
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/getNote.py
+			songbook/data/chordDB.json
+			songbook/data/codeDB.json
+			songbook/js/songs.css
+		included:
+			handling output for PATTERN T (text only)
+			added a bunch of chords to the music module
+			made lyrics font bold in chart display
+	2021/12/06
+		file list:
+			songbook/js/songs.css
+			songbook/js/songbook.js
+			songbook/programs/Songs.py
+			songbook/programs/getNote.py
+		included:
+			font for NT textarea 
+			better formatting of chart errors
+	2021/12/04
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/Music.py
+			songbook/programs/getNote.py
+			songbook/js/songbook.js
+			songbook/data/marie/reviewCharts.json			-----> new
+			songbook/data/miranda/reviewCharts.json			-----> new
+			songbook/data/merzanis/reviewCharts.json		-----> new
+			songbook/data/thoryvo/reviewCharts.json			-----> new
+		included:
+			Download marie, miranda, merzanis, and thoryvo files
+			Run conversion to create reviewCharts.json for repository, eliminate CH and bCH, and write a header record: <SOURCE X><CHART Y><PATTERN MT>
+			Process trigger file to new file during regular updateReview process
+			process CH as part of review batch process
+			json file by song of CH for pos
+			playback key
+	2021/11/23
+		file list:
+			songbook/programs/Music.py
+			songbook/programs/Songs.py
+			songbook/data/chordDB.json
+			songbook/data/codeDB.json
+		included:
+			added diminished 7 chords, as well as process to convert d in chordName to diminished symbol for chordDB
+			added locrian mode
+	2021/11/21
+		file list:
+			songbook/programs/Music.py
+			songbook/programs/Songs.py
+			songbook/data/chordDB.json
+			songbook/data/codeDB.json
+			songbook/js/songs.css
+		included:
+			adding chords for dorian, phrygean, lydian, and mixolydian modes to Music
+			created a miscellaneous chord add process for mM7
+	2021/11/17
+		file list:
+			songbook/programs/Music.py
+			songbook/programs/Songs.py
+			songbook/data/chordDB.json
+			songbook/data/codeDB.json
+			songbook/js/songs.css
+		included:
+			added inversions and secondary chords to chart conversion
+			changed css for chart display			
+	2021/11/08
+		file list:
+			songbook/programs/Music.py
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/data/chordDB.json				--------> new
+			songbook/data/codeDB.json				--------> new
+		included:
+			dismantled chord buttons and switched to mark-up 
+			reading chordDB and codeDB from files
+			restricted chordDB to in-key only for the moment
+	2021/10/12
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/Music.py
+			songbook/js/songbook.js
+		included:
+			chart composer for minor key songs gets key of relative major
+			added review ahead option
+	2021/09/30
+		file list:
+			songbook/programs/Songs.py
+		included:
+			moved due date to top of reviewPanel
+	2021/09/26
+		file list:
+			songbook/programs/chartSaver.py
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/js/songbook.js
+		included:
+			fixed bug in delete cell
+			forced cascading backups on songbook file
+	2021/09/19
+		file list:
+			songbook/programs/chartSaver.py
+			songbook/programs/getNote.py
+			songbook/programs/index.py
+			songbook/js/songbook.js
+		included:
+			display chart for NOTES
+			changed sorting of due songs to order by most recently done, causing songs on heavy rotation to go to the top of the list
+	2021/09/05:
+		file list:
+			songbook/programs/Music.py				--> new
+			songbook/programs/chartMaker.py			--> new
+			songbook/programs/chartSaver.py			--> new
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/js/songbook.js
+			songbook/js/songs.css
+		included:
+			first implementation of song notation
+	2021/07/12:
+		file list:
+			songbook/programs/Songs.py
+			songbook/js/songs.css
+		included:
+			adding large-print title on review page
+			when you hit another due button, unhighlight the one previously highlighted -- implemented 8/5/21 in interim release
+	2021/06/05
+		file list:
+			songbook/data/admin.json
+			songbook/data/thoryvo/config.json
+			songbook/data/thoryvo/songBook.json
+			songbook/data/thoryvo/reviewSongs.json
+			songbook/data/thoryvo/reviewDates.json
+			songbook/js/songbook.js
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+		included:
+			creating repository for thoryvo
+			added prompt for tag category when adding tag
+	2021/04/16
+		file list:
+			songbook/js/songbook.js
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+		included:
+			trying something for the modal that sporadically doesn't come up
+			trying something similar for modal close bug
+			bug: sometimes modal won't close when showing notes -- looking for property of null
+			deck settings saved to and loaded from local storage
+			bug: miranda deck broken
+			bug: merzanis deck broken
+			run fileFix program against miranda and merzanis files
+			work new RT and RA fields into displayed info - hidden fields and sorts, and also on datalist
+			bug: sorts broken b/c/o losing lastColumnSorted -- moved it to session storage
+	2021/04/03
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/programs/getHistory.py
+		included:
+			update history process changed to update those fields
+			add fields on songbook rec: totalReviews and averageDaysBetweenReviews - added RT and RA fields
+			revamped song history modal to accommodate
+			added new fields to review panel and moved creation date to review panel
+			history report: for deck should display deck name in changeRec display instead of code
+	2021/04/02
+		file list:
+			songbook/programs/Songs.py
+			songbook/data/marie/reviewDates.json
+			songbook/data/marie/reviewSongs.json
+		included:
+			update history now creates reviewDates and reviewSongs
+			monthly files are being replaced with reviewDates
+			reviewTrigger.json will collect records until update history is run
+			song history and review by date processes use new files
+	2021/03/23
+		file list:
+			songbook/programs/index.py
+			songbook/js/songbook.js
+		included:
+			bug: modal not working since prior release
+	2021/03/20
+		file list:
+			songbook/programs/index.py
+			songbook/programs/Songs.py
+			songbook/js/songbook.js
+		included:
+			change cookies to local storage
+			fix bugs in js not firing at the right time after 3/19 tomar release
+	2021/02/18
+		file list:
+			songbook/js/songbook.js
+		included:
+			collapse notes automatically if focus shifts below to add tag or link
+	2021/02/14
+		file list:
+			songbook/programs/Songs.py - updated 2/26/21, coded it backwards, discovered when file grew
+		included:
+			bug: history not working for anki history -- happy together is test case
+			when doing save of review, store len(dict) when read in, and compare to len(dict) before save
+			not a fix -- problem couldn't be recreated in test, so this is to flag if it happens again 
+	2021/01/27
+		file list:
+			songbook/js/songbook.js
+			songbook/programs/Songs.py
+		included:
+			major revamp of admin page: only show existing roles, add new via drop-down to activate blank
+	2021/01/19
+		file list:
+			songbook/js/songbook.js
+			songbook/js/songs.css
+			songbook/programs/Songs.py
+		included:
+			bugs in creating new card
+			custom date with AND without review, add a button so both are possible
+			altered some button fonts, moved tag input fields so you don't have to scroll right 
+	2021/01/17
+		file list:
+			songbook/js/songs.css
+			songbook/js/songbook.js
+			songbook/programs/Songs.py
+		included:
+			reviewed by date should take a range
+			bug: addLink and addMedia were missing if there weren't any already
+	2021/01/12
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/js/songs.css
+		included:
+			working with css a LOT
+	2021/01/06
+		file list:
+			songbook/programs/Songs.py
+			songbook/js/songs.css
+		included:
+			make 'due' column hidden, add 'sort by due', add due date when hover over songlink
+			move last review date to under due date on review panel, show elapsed days
+			made review buttons bigger
+	2021/01/03
+		file list:
+			songbook/programs/Songs.py
+		included:
+			history report: for deck should display deck name in changeRec display instead of code
+			review panel -- review options are 2-up
+	2020/12/29
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/saveAdminFile.py			new, need permissions set
+			songbook/js/songbook.js
+		included:
+			edit user list and back up admin.json
+	2020/12/26
+		file list:
+			songbook/programs/Songs.py
+		included:
+			bug: reviewHistory update process had a bug
+			bug:changeRec missing LL on review record
+			removed displays from history update process
+			cleaned up reviewArea display a little bit
+	2020/12/17
+		file list:
+			songbook/programs/Songs.py
+			songbook/js/songbook.js
+		included:
+			function to add &nbsp;
+			bug: input date for review by date changed to onchange instead of oninput
+			menu option to update review history
+	2020/12/11
+		file list:
+			songbook/programs/Songs.py
+			songbook/data/marie/reviewHistory.json
+			songbook/data/marie/reviewsYYYY-MM.json from 2017-02 through 2020-12
+		included:
+			review record will only include N and/or C if there's data in them
+			reviewHistory file for retrieving history by song id
+			history from anki converted and monthly files created
+	2020/12/05
+		file list:
+			songbook/programs/Songs.py
+		included:
+			bug: not writing changeRec if no review
+			but: for TT change, not displaying changeRec correctly
+			display creation date, recently added to file via anki data
+	2020/12/04
+		file list:
+			songbook/programs/Songs.py
+			songbook/data/index.py
+			songbook/data/marie/index.py
+			songbook/data/miranda/index.py
+			songbook/js/index.py
+			songbook/js/marie/index.py
+			songbook/js/miranda/index.py
+		included:
+			bug: path in function showMedia
+			bug: error removing LL/SB entries
+			adding index.py to a bunch of folders to protect them
+	2020/12/01
+		file list:
+			songbook/programs/Songs.py
+		included:
+			widened notes input textarea to 140, moved notes-related buttons up to previous row
+	2020/11/30
+		NOTE:
+			moving project to digitaloceans site. splitting between htdocs and cgi-bin will no longer be necessary, new directory structure will be reflected below.
+		file list:
+			songbook/programs/Songs.py
+			songbook/programs/index.py
+			songbook/programs/srchResults.py
+			songbook/programs/dataList.py
+			songbook/programs/getNote.py
+			songbook/programs/getHistory.py
+			songbook/programs/tagList.py
+			songbook/data/admin.json
+			songbook/data/marie/config.json
+			songbook/data/marie/reviews2020-11.json
+			songbook/data/marie/songBook.json
+			songbook/js/songs.css
+			songbook/js/songbook.js
+			songbook/js/marie
+		included:
+			just making it come up on the new site tomargames.xyz
+			added <meta name="viewport" content="width=device-width, initial-scale=1"> for mobile use
+	2020/11/17
+		NOTE:
+			unable to use tomargames.com with Python3 on netsol site, running locally since 11/5/2020
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+			htdocs/python/songbook/songbook.js
+		included:
+			moved most of file save out of index.py to Songs.processInput
+			bug: can't copy a song and change the title
+			bug: can't create new song records
+	2020/11/01
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			bug: column sort doesn't work on repeated hits, should reverse sort
+			bug: column sort doesn't work at all
+	2020/10/29
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			move expand Notes button and view Notes button to next to notes field, valign=top
+			adding changeRec to history record, modify history page to display
+			changeRec is tracking changes to TG, SB, LL (+/- only), TT, and DK
+			note textarea opens expanded
+	2020/10/21
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			toggle text on expand notes button
+			move Add button for tag categories to <th> and make it a +
+	2020/10/19
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			addLink and addMedia show type title instead of code when activated
+			addTag placeholder changes to Category title when activated
+			toggle number of rows on notes field between 1 and 20, and put at bottom
+	2020/10/15
+		file list:
+			htdocs/python/songbook/songs.css
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			column sort, which still doesn't work, now gets rows to sort by className songRow
+			add multiple tags, links, and media
+			add indicator to right of dropdown, set to M, but if it's not on a mobile, will show D
+	2020/10/08
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			whatever makes 'record saved, no review' happen, shouldn't happen if you wrote a review note
+			organize review history page to feature notes in reverse sequence, use html to do it
+			bug: copying card doesn't work since last release
+	2020/10/05
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			add tag button activates TAG input field and gives it focus
+			multiple review records in a single day will be consolidated, with notes carried
+	2020/10/02
+		file list:
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/tagList.py      -------> new
+			htdocs/python/songbook/songbook.js
+		included:
+			hover on tag display will show how many songs have that tag (also how many years ago for Y tags)
+			add an input field for notes that will be saved with the review record
+			copy and history buttons trade places
+			add function to detect mobile phone to songbook.js
+			if on phone, don't put focus on searchBox when page loads
+			add delete checkbox on tag display when in review mode
+			remove text tag input field from review area 
+			add tag button for each category which will trigger addTag.py for the category
+			addTag.py will redisplay the datalist for the addTag
+			add category-specific input field to add tag to list when in review mode
+			bug fix: datalist no longer in div, repopulate just replaces options in datalist
+	2020/09/02
+		file list:
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			ability to update LL and SB -- add, edit, and delete
+			bug: copy card not saving correctly -- fixed, but will not copy LL and SB
+			validation of LL and SB before form submit on save
+			each LL and SB should have a delete button next to it
+			review area will display existing LL and SB, blank entry disabled for each with button to set
+	2020/08/25
+		file list:
+			cgi-bin/tomar/songbook/miranda/config.json
+			cgi-bin/tomar/songbook/marie/config.json
+			cgi-bin/tomar/songbook/miranda/songBook.json
+			cgi-bin/tomar/songbook/marie/songBook.json
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/srchResults.py
+			cgi-bin/tomar/songbook/admin.json
+		included:
+			added kathy as a user
+			convert video, wiki, and lyrics fields to a dict of links with a label [label, url]]
+			convert SB to same kind of dict file to allow multiples
+	2020/08/14
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			send inactive songs to their own bucket, no longer included in "due"
+			write menu option to list inactive songs
+			move deck checkboxes to their own function to call from mobile.py
+			move len(songlist) to the title line, not in parens after Title header
+	2020/08/13
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			bug: save must activate RN input field
+			highlight match of (RN - RL) to cornflowerblue	
+			change color after selection to lightyellow
+			change color of elapsed days match to deepskyblue
+			add title to search results if list
+	2020/08/09 -- with both files moved again on 8/10 to correct bug*
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			*bug fix to re-enable RN input field when reviewing card
+			add 'schedule' button and seed RN date with today in review mode
+			sort tags in displaySong -- artists, years, etc.
+	2020/08/07
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			fixed bugs in history page
+			fixed highlighting of review button when matched by days since last review
+	2020/08/05
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			bug: charlie freak not coming up in review mode (any song with no last review date)
+			center buttons on review panel
+			days between last and scheduled review matches a  button, highlight that button
+	2020/08/04
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			move due date to upper right of review panel
+			spacing of totals on history modal
+	2020/08/03
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/getHistory.py - new
+			htdocs/python/songbook/songbook.js
+		included:
+			put scheduling buttons on review panel
+			put due date input field on review panel
+			when you hover over year display, show how many years ago it is
+			read and write cookie when owner/deck settings change
+			change display to due date, with difference between last done and due in parens 
+			put due date on drop-down info for song
+			review mode, history for current song to modal, sorted in reverse, monthly totals, average days
+			review panel is just buttons, existing ones and scheduling buttons
+	2020/07/16
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/index.py
+		included:
+			fix bug on page load with role selection
+	2020/07/13
+		file list:
+			cgi-bin/tomar/songbook/admin.json
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/miranda/config.json
+			cgi-bin/tomar/songbook/miranda/songBook.json 
+			htdocs/python/songbook/miranda -- binary transfer of folder
+		included:
+			set up file for miranda and put songs in it -- ode to billie jo, whole new world, cuckooMay
+	2020/06/24
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			highlight review button after you've selected it
+	2020/06/20 (post-release fix 6/22)
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+		included:
+			add (x days ago) to Last: display (bug fixed post-release -- handle if no "Last" date)
+			in copy, don't retain Last date (post-release)
+	2020/06/19
+		file list:
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			userfields should be in their own table 
+			edit process in index.py should filter dupes out of tags
+			review list by date: fill srchResults with input date, submit to process
+			on save review process, add filter to take later due date of two review records with same key
+	2020/05/31
+		file list:
+			htdocs/python/songbook/songs.css
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/marie/config.json
+		included:
+			button for later today, notes is 120 characters for modal
+			change the x in the modal to be "close"
+			userfields need to be in td within tr
+	2020/05/25
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			display current role somewhere, maybe on drop-down before other roles are listed
+			bug: not getting "due" on reload after record save if apostrophe in title
+	2020/05/18
+		file list:
+			cgi-bin/tomar/songbook/admin.json
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/marie/songBook.json 			--> use SongConvert3.py to convert
+			cgi-bin/tomar/songbook/marie/config.json			--> remove files in chris folder
+			cgi-bin/tomar/songbook/marie/reviewsYYYY-MM.json	--> use ReviewConvert.py to convert
+			htdocs/python/songbook/songbook.js
+		included:
+			change review file to run a file for every month
+			tags should go above the notes, and notes should be shorter
+			test something with all the fields in use and see what it looks like to shorten notes
+			put userfields in sequence order on display and review screens
+	2020/05/06
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+			cgi-bin/tomar/songbook/marie/config.json
+		included:
+			redo displaySong and reviewArea to use config information
+			mp3 file in songbook/marie content folder
+			make time field mandatory and put it on top row
+	2020/04/22
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			post bug fix: showNote and songBook not working -- jesus was a crossmaker
+			reviewed today menu option on top menu
+			consolidated all ajax forms pointing to srchResults.py to go through doSearch()
+	2020/04/22
+		file list:
+			cgi-bin/tomar/songbook/Songs.py
+			htdocs/python/songbook/songbook.js
+		included:
+			bug: links on the right in list format, notes not working
+			if you click on a link and haven't hit save, prompt for save -- doSearch() javascript routine
+	2020/04/15
+		file list:
+			htdocs/python/songbook/songbook.js
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			bug: showNote needs to go to repository subfolder rather than media folder
+			deselect after doing "due" 
+			add hover over the notes, songbook, wiki, and lyrics
+			rerun loaddata after update so review count is accurate after save
+			sort by title before display for srchResults
+			extract song title into a hidden html column that you sort on for a title sort
+	2020/04/13 implementation
+		file list:
+			cgi-bin/tomar/songbook/admin.json
+			cgi-bin/tomar/songbook/Songs.py
+			cgi-bin/tomar/songbook/index.py
+		included:
+			add Viewer role that doesn't see notes
+			implement directory structure for json files and media files - change prefix to name
+			automate backup process
+			link to retrieve record saved in the message box, add title back in
+			admin.json will change -- get id's from one up on site and put them in local copy before moving
+	2020/04/09 implementation (not documented)
+----------------------------------------------------------------------------------------------------------
+Files
+	digitaloceans site of tomargames.xyz, activated 12/1/2020
+		in tomargames.xyz/songbook 
+			programs folder
+				chordPalette.py			shows chords available in a given key, in a new tab
+				dataList.py				populates the suggestions for searchBox
+				getHistory.py			shows review history for songKey supplied in a modal
+				getNote.py				renders a chart in a modal from the NT textarea
+				index.py				the page that holds the banner, searchBox, searchResults
+				reports.py				reports menu, in a new tab
+				saveAdminFile.py		polls checkboxes on admin page and updates admin.json record for this repository
+				Songs.py				main module
+				srchResults.py			executes a search and returns a songList to searchResults div
+				tagList.py				populates suggestions for tagList for a category
+			data folder
+				admin.json 				governs repositories, dict of dict for each repository
+				chordDB.json			chord data by key and chord name
+				codeDB.json				chord data by code
+				constants.json			field info, constants, etc.
+				musicConstants.json		notation stuff
+				data folders 			folder for each repository in admin.json, 3 backups
+					pdfs				folder for pdf representations of charts
+					config.json			user fields, tag categories, decks, preferences (not used yet)
+					songBook.json		see constants["fields"]
+					reviewDates.json	record for each date, list of songs reviewed
+					reviewSongs.json	record for each song, dict of dates with changeRec
+					reviewCharts.json	record for each song, list of sets: meta dict and list of lines: list of cells: dict with M (chord code) and T (text)
+					chordUsage.json		record for each chord code, dict of songIDs that use that chord: list of references: dict with set, line, and cell for each reference
+					reviewTrigger.json	collects records until update process runs, then it is deleted
+			metronome folder holds metronome.js and supporting files for metronome
+			js folder
+				songs.css
+				reports.css
+				songbook.js
+				reports.js
+				pdfIcon.png
+				content folders
+					folder for each repository
+					content
+			local storage
+				songbookRR -- column 1 is role (O or U), rest is repository
+				songbookDD -- deck settings (1 or 0 for each deck)
+			session storage
+				lastSortedCol -- initially -1
+				songList -- holds HTML for the latest due list, to go back to if you cancel out of edit
+----------------------------------------python------------------------------------------------------------------
+	netsol site of tomargames.com structure. 
+	server upgrade at host failed 11/5/2020 and reverted to python2
+		in cgi-bin/tomar/songbook  ---> 11/30/2020 now in tomargames.xyz/songbook/programs 
+			py files
+				Songs.py
+				Music.py					loads music theory module to support chartMaker
+				chartMaker.py				replaces searchResults div with chart composer for songKey supplied
+				index.py					the page that holds the banner, searchBox, searchResults
+				srchResults.py				executes a search and returns a songList to searchResults div
+				dataList.py					populates the suggestions for searchBox
+				getNote.py					shows notes for songKey supplied in a modal
+				getHistory.py				shows review history for songKey supplied in a modal
+				tagList.py					populates suggestions for tagList for a category
+			json files			  ---> 11/30/2020 now in tomargames.xyz/songbook/data 
+				admin.json 		governs repositories, dict of dict for each repository
+				chordDB.json 	dict, by key, and letter-named chords with accompanying info
+				codeDB.json 	dict, by key, and chord codes, identifying letter-named chord in each key
+				data folders - correspond to "K" element of owner records in admin.json
+					X folder for each repository, with 3 daily backups set up for writing
+						config.json	
+						songBook.json
+						reviewDates.json --> replaces monthly files (reviewsYY-MM.json) - {date: [songIds]}
+						reviewSongs.json --> replaces reviewHistory.json - {songId: {date: {}}}
+						reviewCharts.json --> stores chart as [] of sets, each set is {meta:{}, lines[]}
+						chordUsage.json --> {chordId: {songId: count}}
+						reviewTrigger.json-> collects records until update process runs, then it is deleted
+						--------------------------------------------------------------------
+						files below to replaced by new structure above on 2021-04-?? implementation
+						reviewsYY-MM.json --> first of month creates a new file for the month
+							file is [] of {}
+							{"D": YYYY-MM-DD, "N": notes, "I": songId, "C": {} of changes to fields:
+								TG:[+/-, value], 
+								SB:[+/-, value], 
+								LL: [+/-, label, value],
+								TT: [old value, new value],
+								DK: [old value, new value]
+						reviewHistory.json 
+							file is {} by songkey, holding {} of prior reviews keyed by date
+							{"[songId]": {"YYYY-MM-DD": {} -- could hold N[otes(str)] or C[hangeRec({})]
+		in htdocs/python/songbook   ---> 11/30/2020 now in tomargames.xyz/songbook/js 
+				songs.css
+				songbook.js
+				media folders 
+					folder for each repository
+						content
+----------------------------------------------------------------------------------------------------------
+Roles - codes correspond to "SC" element in self.fields and self.userFields
+	O(wner): 	access to everything
+	U(ser): 	can see everything, no edit or review
+History
+	pre-2017 - google spreadsheets and app to manage them via google code
+	2/2017 - discovered anki, medium article
+	2/2018 - medium article after a year, already extracting data from anki to tomar 
+		tag categories established
+	2/2019 - medium article after 2 yrs, noticing it didn't give me songs when it said it would
+	2/2020 - decided to pull out of anki and add its functionality to my tomar browser
+	11/2020 - netsol hosting site for tomargames reverts to python 2.7, making current software unusable
+			established site at tomargames.xyz and implemented songbook as its first application
+New repository
+	admin.json -- add owner record, user ids
+	make a directory with repository name in songbook/data
+		create empty songbook.json {}
+		create empty reviewSongs.json {}
+		create empty reviewDates.json {}
+		create empty reviewCharts.json {}
+		create empty chordUsage.json {}
+		create config.json using template
+		add index.py template to prevent entry
+	make a directory with repository name in songbook/js
+		add index.py template to prevent entry
+Fields:
+	Proprietary - see constants["fields"]
+	User-controlled text fields in config["userFields"]
+		text
+Screen sizes:
+	column width -- 50 at size 60
+	Device	 		Portrait Width	Landscape Width	Portrait Height	Landscape Height
+	Pixel3A			507				760				878				313
+	Tom Phone		651				651				1013			285
+	Kitchen Lenovo					1280							609
+	New Lenovo						1280							601
+	Tablet			800				1280			1112			632
+	Piano HP						1600							789
+	Wide Monitor					1920							961
+	Tom PC			864				1536			1398			726
+Search results flow:
+	1. Column headings - sort by that column
+	2. Title link 
+		2.1 If viable chart 
+			2.1.1 Display chart modal from stored record NT
+			2.1.2 If more pages, "next" moves to next page
+			2.1.3 If not more pages, "close" closes and brings up detail
+			2.1.4 Clicking outside the box will always close back to list
+		2.2 If no chart
+			2.2.1 Display detail
+			2.2.2 Schedule button schedules, saves, and reloads list
+			2.2.3 Close goes back to list
+	3. Schedule button - see 2.2
+	4. Edit button
+		4.1 Save
+			4.1.1 Enabled only if data has changed
+			4.1.2 Saves record and reloads list
+		4.2 Cancel - closes edit and returns to list
+		4.3 Chart
+			4.3.1 Displays chart from current value of NT
+			4.3.2 Each set has an "edit" link that will close the chart modal bring you into the NT textarea at that point
+			4.3.3 If not more pages, "close" closes back to the edit page
+		4.4 History
+		4.5 Copy
+		4.6 Import Chart
+		4.7 Tag buttons -- add tag of that type
+		4.8 Tag checkBoxes - remove that tag
