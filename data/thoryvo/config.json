@@ -1,0 +1,41 @@
+{
+	"decks":
+	{
+		"0":{"name":"JAM", "color": "beige"},
+		"1":{"name":"Thoryvo", "color": "lightcyan"},
+		"2":{"name":"Alexis", "color": "azure"},
+		"3":{"name":"Peach", "color": "lavender"}
+	},
+	"tagCtgs":
+	{
+		"A":{"seq": 0,"title": "Artist"},
+		"B":{"seq": 9,"title": "BPM"},
+		"C":{"seq": 2,"title": "Sets"},
+		"G":{"seq": 3,"title": "Order"},
+		"H":{"seq": 6,"title": "Peach"},
+		"K":{"seq": 4,"title": "Key"},
+		"M":{"seq": 8,"title": "Rob"},
+		"O":{"seq": 5,"title": "Capo"},
+		"S":{"seq": 7,"title": "Jay"},
+		"Y":{"seq": 1,"title": "Year"}
+	},
+	"reviewOptions":
+	[
+		["1day", 1], 
+		["3days", 3], 
+		["5days", 5], 
+		["1week", 7], 
+		["10days", 10],
+		["2weeks", 14], 
+		["3weeks", 21], 
+		["1month", 30], 
+		["6weeks", 45], 
+		["2months", 60], 
+		["3months", 90],
+		["6months", 180]
+	],
+	"userFields":
+	{
+		"TM":{"seq": 0,"title": "Time","type": "txts", "sec": "U"}
+	}
+}

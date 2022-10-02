@@ -1,0 +1,37 @@
+{
+	"decks":
+	{
+		"0":{"name":"lucasNmarie", "color": "beige"}
+	},
+	"tagCtgs":
+	{
+		"A":{"seq": 0,"title": "Artist"},
+		"B":{"seq": 6,"title": "BPM"},
+		"C":{"seq": 4,"title": "Collection"},
+		"G":{"seq": 2,"title": "Group"},
+		"H":{"seq": 3,"title": "Chart"},
+		"K":{"seq": 5,"title": "Key"},
+		"M":{"seq": 7,"title": "Music"},
+		"S":{"seq": 8,"title": "People"},
+		"Y":{"seq": 1,"title": "Year"}
+	},
+	"reviewOptions":
+	[
+		["1day", 1], 
+		["3days", 3], 
+		["5days", 5], 
+		["1week", 7], 
+		["10days", 10],
+		["2weeks", 14], 
+		["3weeks", 21], 
+		["1month", 30], 
+		["6weeks", 45], 
+		["2months", 60], 
+		["3months", 90],
+		["6months", 180]
+	],
+	"userFields":
+	{
+		"TM":{"seq": 0,"title": "Time","type": "txts", "sec": "U"}
+	}
+}
