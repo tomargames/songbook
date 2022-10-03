@@ -79,7 +79,7 @@ function enableSave()
 function addEntry(n)
 {
 	var titles = {"LL": "URL", "SB": "file name"};
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 6; i++)
 	{
 		if ($("TYP" + i).disabled == true)
 		{
@@ -417,7 +417,7 @@ function addTag(ctg)
 {
 	//changing to use TAG input field dynamically by calling tagList.py
 	//10/14/20 changing to make 5 input fields, each with an associated taglist populated dynamically here
-	for (i = 0; i < 5; i++)
+	for (i = 0; i < 6; i++)
 	{
 		//alert("in loop " + i);
 		if ($("TAG" + i).disabled == true)

@@ -146,7 +146,7 @@ else:
 								if sb.songDict[s][f][i] != fieldValue:
 									# will be [=, key, oldvalue, newvalue]
 									changeRec[f].append(("=", i, sb.songDict[s][f][i], fieldValue))
-					# 5 instances of TYP LBL VAL and TAG
+					# 6 instances of TYP LBL VAL and TAG
 					for i in range(6):
 						newTag = form.getvalue(f'TAG{i}', '')
 						if newTag > '':
