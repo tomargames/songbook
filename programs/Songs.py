@@ -142,7 +142,9 @@ class Songs(object):
 				self.songDict[s][f] = changeRec[f][1]
 		self.songDict[s]["RL"] = RL
 		self.songDict[s]["RN"] = RN
-		self.songDict[s]["NT"] = NT
+		if self.songDict[s]["NT"] != NT:					#if change to existing NT, add it to changeRec
+			changeRec["NT"] = True
+			self.songDict[s]["NT"] = NT
 		self.songDict[s]["MT"]["bpm"] = bpm
 		self.songDict[s]["MT"]["meterString"] = meterString
 		self.songDict[s]["MT"]["noteResolution"] = noteResolution
@@ -160,6 +162,7 @@ class Songs(object):
 					rev = f'Record not saved, check tag {t}: {self.songLink(s)}'
 			if goodtags == True:
 				#deal with printing if apostrophes are in the title
+				# utils.writeLog(f"ready to save, NT is {self.songDict[s]['NT']}")
 				title = re.sub("'", "&apos;", self.songDict[s]["TT"])
 				fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'songBook')		# song file
 				if utils.saveFile(fileName, self.songDict, True) != 'good':
@@ -167,7 +170,6 @@ class Songs(object):
 					utils.writeLog(f'Error on save, rev = {rev}')
 				elif RL == str(self.today) or revNote > '' or self.changedRec(changeRec):
 					#reviewed today, write a review record	
-					#utils.writeLog('s: {}, RL: {}, RN: {}, changeRec: {}'.format(s, RL, RN, changeRec))
 					try:
 						if self.recReview(s, revNote, changeRec, RL, RN) != 'good':
 							rev = f'Record saved, error writing review record for {self.songLink(s)}' 
@@ -1118,8 +1120,8 @@ categoryTitles = {
 		ttl = f' title="{tCount} songs"'
 		return f'<a{ttl} href=javascript:doSearch("{t}"); class="chartText">{t[1:]}</a>'
 	def newChangeRec(self):
-		# establishes an empty changeRec
-		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[]}
+		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
+		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": False}
 		for u in self.config["userFields"]:
 			changeRec[u] = []
 		return changeRec
@@ -1128,6 +1130,8 @@ categoryTitles = {
 		for i in ['SB', 'LL', 'TG', 'DK', 'TT']:
 			if len(changeRec[i]) > 0:
 				return True
+		if changeRec["NT"] == True:
+			return True
 		for u in self.config["userFields"]:
 			if len(changeRec[u]) > 0:
 				return True
@@ -1171,13 +1175,6 @@ categoryTitles = {
 		except Exception as e:
 			utils.writeLog(f'ERROR in recReview: {e}' )
 		return rc
-	def revChartProcess(self, inRec):
-		# compress MT format into MTT... where possible
-		newRec = []
-		for set in inRec:
-			for line in set:
-				print('revChartProcess not coded yet')
-		return newRec	
 	def updateReviewHistory(self):
 		#read in reviewTrigger file 
 		message = 'No updates necessary'
@@ -1205,72 +1202,78 @@ categoryTitles = {
 				for r in trigList:
 					songId = r["I"]
 					revDate = r["D"]
+					if "C" in r:
+						changeRec = r["C"]
+					else:
+						changeRec = {}
 					if revDate not in revDateDict:
 						revDateDict[revDate] = []
 					if songId not in revSongDict:
 						revSongDict[songId] = {}
-					# processNTtoCH returns (rc, record)
-					try:
-						CH = self.processNTtoCH(self.songDict[songId]['NT'])
-						if CH[0] == 'good' or CH[0] == 'err1':
-							# now optimize before saving to reviewCharts file
-							# newRec = self.revChartProcess(CH[1])
-							revChartDict[songId] = CH[1]
-							# first, remove all references to this songId from chordUsageDict
-							for ch in chordUsageDict:
-								if songId in chordUsageDict[ch]:
-									chordUsageDict[ch].pop(songId)
-							# then, add entries for every chord in the song
-							for s in range(len(CH[1])):				# for each set
-								key = CH[1][s]["meta"]["KEYOUT"]
-								for l in range(len(CH[1][s]["lines"])):				# for each line in the set
-									for c in range(len(CH[1][s]["lines"][l])):						# for each cell in the line
-										if CH[1][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
-											if songId in chordUsageDict[CH[1][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
-												chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
+					#only process CH-related stuff if NT field has changed
+					if "NT" in changeRec and changeRec["NT"] == True:
+						# processNTtoCH returns (rc, record)
+						try:
+							CH = self.processNTtoCH(self.songDict[songId]['NT'])
+							if CH[0] == 'good' or CH[0] == 'err1':
+								# now optimize before saving to reviewCharts file
+								# newRec = self.revChartProcess(CH[1])
+								revChartDict[songId] = CH[1]
+								# first, remove all references to this songId from chordUsageDict
+								for ch in chordUsageDict:
+									if songId in chordUsageDict[ch]:
+										chordUsageDict[ch].pop(songId)
+								# then, add entries for every chord in the song
+								for s in range(len(CH[1])):				# for each set
+									key = CH[1][s]["meta"]["KEYOUT"]
+									for l in range(len(CH[1][s]["lines"])):				# for each line in the set
+										for c in range(len(CH[1][s]["lines"][l])):						# for each cell in the line
+											if CH[1][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
+												if songId in chordUsageDict[CH[1][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
+													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
+												else:
+													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
 											else:
-												chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
+												chordUsageDict[CH[1][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
+								# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
+								pdf = FPDF()
+								pdf.add_page()
+								pdf.set_author("ToMarGames SongBook")
+								pdf.set_font("courier", size = 16, style = 'B')
+								pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
+								pdf.ln()
+								for s in range(len(CH[1])):				# for each set
+									key = CH[1][s]["meta"]["KEYOUT"]
+									for l in range(len(CH[1][s]["lines"])):				# for each line in the set
+										if len(CH[1][s]["lines"][l]) == 1 and CH[1][s]["lines"][l][0]["M"] == "X":
+											pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
 										else:
-											chordUsageDict[CH[1][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
-							# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
-							pdf = FPDF()
-							pdf.add_page()
-							pdf.set_author("ToMarGames SongBook")
-							pdf.set_font("courier", size = 16, style = 'B')
-							pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
-							pdf.ln()
-							for s in range(len(CH[1])):				# for each set
-								key = CH[1][s]["meta"]["KEYOUT"]
-								for l in range(len(CH[1][s]["lines"])):				# for each line in the set
-									if len(CH[1][s]["lines"][l]) == 1 and CH[1][s]["lines"][l][0]["M"] == "X":
-										pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-									else:
-										musicLine = textLine = ''
-										for c in CH[1][s]["lines"][l]:						# for each cell in the line
-											# size of cell will be longer of len(M) and len(T) + 1
-											txtLength = 0 if "T" not in c else len(c["T"])
-											chord = self.getChordNameInKey(c["M"], key)
-											cellLength = max(len(chord), txtLength) + 1
-											musicLine += chord.ljust(cellLength)
-											textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
-										pdf.set_font("courier", size = 14, style = "B")
-										pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
-										if "T" in CH[1][s]["meta"]["PATTERN"]:
-											pdf.set_font("courier", size = 14, style = "")
-											pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
-										pdf.ln()
-								# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-							pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{songId}.pdf')
-							pdf.output(pdfFile)
-						if CH[0] != 'good':
-							# collect messages
-							self.songDict[songId]['CS'] = int(CH[0][3])
-							chartErrors.append(f'{songId}: {self.songDict[songId]["TT"]}, {CH[0]}' )
-						else:
-							self.songDict[songId]['CS'] = 0
-					except Exception as e:
-						utils.writeLog(f'updateReviewHistory ERROR on {songId} {self.songDict[songId]["TT"]}: {e}' )
-					# if this is first record for song/date, insert it as is to both files
+											musicLine = textLine = ''
+											for c in CH[1][s]["lines"][l]:						# for each cell in the line
+												# size of cell will be longer of len(M) and len(T) + 1
+												txtLength = 0 if "T" not in c else len(c["T"])
+												chord = self.getChordNameInKey(c["M"], key)
+												cellLength = max(len(chord), txtLength) + 1
+												musicLine += chord.ljust(cellLength)
+												textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
+											pdf.set_font("courier", size = 14, style = "B")
+											pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
+											if "T" in CH[1][s]["meta"]["PATTERN"]:
+												pdf.set_font("courier", size = 14, style = "")
+												pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
+											pdf.ln()
+									# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
+								pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{songId}.pdf')
+								pdf.output(pdfFile)
+							if CH[0] != 'good':
+								# collect messages
+								self.songDict[songId]['CS'] = int(CH[0][3])
+								chartErrors.append(f'{songId}: {self.songDict[songId]["TT"]}, {CH[0]}' )
+							else:
+								self.songDict[songId]['CS'] = 0
+						except Exception as e:
+							utils.writeLog(f'updateReviewHistory ERROR on {songId} {self.songDict[songId]["TT"]}: {e}' )
+						# if this is first record for song/date, insert it as is to both files
 					if revDate not in revSongDict[songId]:				#first review for this song/date
 						revSongDict[songId][revDate] = r
 						revDateDict[revDate].append(songId)

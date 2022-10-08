@@ -14,3 +14,4 @@ data/*
 !/data/constants.json
 !/data/musicConstants.json
 programs/__pycache__
+.vscode
