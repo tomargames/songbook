@@ -654,7 +654,7 @@ categoryTitles = {
 		rec['CD'] = rec['RL'] = rec['RN'] = str(self.today)
 		rec['RA'] = rec['RT'] = 0
 		rec['NT'] = '[KEYIN X, KEYOUT X, TYPE V, PATTERN T]'
-		rec['MT'] = {"bpm": "120", "noteResolution": "2", "meterString": "A"}
+		rec['MT'] = {"bpm": "000", "noteResolution": "2", "meterString": "A"}
 		return rec
 	def getSongs(self, q):
 		'''

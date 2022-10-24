@@ -541,8 +541,11 @@ function activateMetronome(parameters) {
 		noteResolution = parseInt(parameters.substring(7, 8))		// 0 == 16th, 1 == 8th, 2 == quarter note
 		meterString = parameters.substring(8);
 	}
-	meter = meterString.length * 4;
-	play();
+	if (!isNaN(tempo) && tempo != "000" && tempo.length == 3) {
+		meter = meterString.length * 4;
+		play();
+	}
+	else { alert("Enter a bpm between 001 and 999 to use the metronome."); }
 }
 function revByDate()
 {
