@@ -163,8 +163,6 @@ else:
 							changeRec[f].append(val)
 					try:
 						# utils.writeLog(f"sending {oper}, {s}, RN: {RN}, RL: {form.getvalue('RL','')}, revNote: {form.getvalue('revNote','')}") 
-						# print('sent {}, {}, {}, {}, {}, {}'.format(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
-						# 	form.getvalue('RN',''), form.getvalue('RL',''), form.getvalue('revNote', '')))
 						rev = sb.processInput(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
 							RN, form.getvalue('RL',''), form.getvalue('revNote', ''), form.getvalue('bpm', '120'), form.getvalue('meterString', 'A'), form.getvalue('noteResolution', '2'))
 					except Exception as e:
