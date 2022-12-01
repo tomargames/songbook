@@ -80,8 +80,12 @@ class Songs(object):
 		else:
 			raise Exception(f'user not found for {gid}, ask marie to set you up')
 	def songLink(self, s):
-		title = f'ID: {s}, Due: {self.songDict[s]["RN"]}, Last: {self.songDict[s]["RL"]}, Created: {self.songDict[s]["CD"]}, Total: {self.songDict[s]["RT"]}, Avg: {self.songDict[s]["RA"]}'
-		return f'<a title="{title}" href=javascript:doSearch("o{s}"); class="chartText">{self.songDict[s]["TT"]}</a>'
+		songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
+		title = f'''<span class=hoverText><b>ID: </b>{s}, <b>Due:</b> {self.songDict[s]['RN']}, <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}, <b>Total:</b> {self.songDict[s]['RT']}, <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
+		display = f'''<div class=hoverContainer><a class=chartText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
+		# utils.writeLog(f'display is {display}')
+		return display
+		# return f'<a title="{title}" href=javascript:doSearch("o{s}"); class="chartText">{self.songDict[s]["TT"]}</a>'
 	def notesFormat(self, note):
 		# all line breaks will turn into ||| for transmission
 		return re.sub('\\r\\n', "xXx", note)
@@ -141,7 +145,10 @@ class Songs(object):
 			if len(changeRec[f]) > 0:
 				self.songDict[s][f] = changeRec[f][1]
 		self.songDict[s]["RL"] = RL
-		self.songDict[s]["RN"] = RN
+		if RN != self.songDict[s]["RN"]:					# if no schedule date specified, put today's date in due date
+			self.songDict[s]["RN"] = RN
+		else:
+			self.songDict[s]["RN"] = str(self.today)
 		if self.songDict[s]["NT"] != NT:					#if change to existing NT, add it to changeRec
 			changeRec["NT"] = True
 			self.songDict[s]["NT"] = NT
@@ -168,20 +175,17 @@ class Songs(object):
 				if utils.saveFile(fileName, self.songDict, True) != 'good':
 					rev = f'Error saving record: {self.songLink(s)}'
 					utils.writeLog(f'Error on save, rev = {rev}')
-				elif RL == str(self.today) or revNote > '' or self.changedRec(changeRec):
+				else:
 					#reviewed today, write a review record	
 					try:
 						if self.recReview(s, revNote, changeRec, RL, RN) != 'good':
 							rev = f'Record saved, error writing review record for {self.songLink(s)}' 
 						else:
 							rev = f'Record saved, due on {self.songDict[s]["RN"]}: {self.songLink(s)}'
-						# utils.writeLog('Error on reviewRec save, rev = {}'.format(rev))
 					except Exception as e:
 						utils.writeLog(f"Exception in recReview on song {s}: {e}" )
 						rev = e
-				else:
-					rev = f'Record saved, no review: {self.songLink(s)}' 
-		# utils.writeLog('processInput for song {} returning rev={}'.format(s, rev))
+		#  utils.writeLog(f'processInput for song {s} rev {rev}')
 		return rev
 	def addLyric(self, curSet, lines, curLine, start, end):
 		if 'T' in curSet["meta"]["PATTERN"]:
@@ -196,8 +200,6 @@ class Songs(object):
 	def getCodeFromChordDB(self, chord, key):
 		if chord == '0':
 			return '0'
-		# G7add6 - example of "add" chord, break down into pre- and post-add parts
-		# add = chord.find("add")
 		slash = chord.find('/')
 		if slash > -1: 					# this is an inversion -- work on the chord part and put it back together afterward
 			cPart = self.findChordInDB(chord[0:slash], key)
@@ -211,16 +213,6 @@ class Songs(object):
 			utils.writeLog(f'returning ? for {chord} in key {key}, inversion error')
 			self.chordErr = True
 			return '?'
-		# elif add > -1:				# this is a chord with an additional interval added, example: G7add6
-		# 	cPart = self.findChordInDB(chord[0:add], key)
-		# 	if cPart == "?":
-		# 		return cPart
-		# 	bPart = chord[add + 3:]			# this is the interval being added
-		# 	if bPart in self.musicConstants["intervals"]:
-		# 		return f"{cPart}add{bPart}"
-		# 	else:
-		# 		utils.writeLog(f'error on chord {chord} in key {key}, {bPart} not in valid intervals')
-		# 		return '?'
 		else:
 			return self.findChordInDB(chord, key)
 	def findChordInDB(self, chord, key):
@@ -245,6 +237,7 @@ class Songs(object):
 				# toDo: log this as part of the updateReview process
 				utils.writeLog(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
 				return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
+		utils.writeLog(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
 	def addChord(self, key, chord, curSet):
 		# utils.writeLog(f'addChord for chord {chord}, key {key}')
 		chord = self.notationCleanUp(chord)
@@ -693,12 +686,11 @@ categoryTitles = {
 			return self.adminEdit()		#admin.json file edit, no rslt
 		elif qType == 'v':
 			return self.revByDateForm()		#reviewed list by date, no rslt
-		elif qType == 'o':				#single song search
+		elif qType == 'o':				#single song search, edit page
 			rslt = [f'{k}' ]		
-			reviewMode = True			# this can be removed if you want to go to a list format for the song, not seeing the value right now
-		elif qType == 'O':				#single song search
+			reviewMode = True			
+		elif qType == 'O':				#single song search, list format
 			rslt = [f'{k}' ]
-			reviewMode = True
 		elif qType == 'w':
 			rslt = self.revByDate(k)
 			title = f"Songs reviewed between {k[0:10]} and {k[10:]} " 
@@ -930,6 +922,7 @@ categoryTitles = {
 		sched += f'<tr><td class="chartText">{self.constants["fields"]["CS"]["title"]}: </td><td class="chartText">{self.songDict[s]["CS"]}</td></tr>'
 		sched += f'<tr><td class="chartText">{self.constants["fields"]["RT"]["title"]}: </td><td class="chartText">{self.songDict[s]["RT"]}</td></tr>'
 		sched += f'<tr><td class="chartText">{self.constants["fields"]["RA"]["title"]}: </td><td class="chartText">{self.songDict[s]["RA"]}</td></tr>'
+		sched += f'<tr><td class="chartText" colspan="2"><input type="text" oninput=enableSave() size="24" class="chartText" name="revNoteEdit" id="revNoteEdit" placeholder="review notes"></td></tr>'
 		sched += '</table>'
 		for i in range(6):
 			adds += f'<datalist id="tagList{i}"></datalist>' 		#options will be filled with call to tagList.py with category
@@ -1031,10 +1024,11 @@ categoryTitles = {
 	def songLinkButtons(self, s):
 		actions = ''
 		cls = "chartText sz80 bgButton"
-		actions += self.makeButton(self.constants["icons"]["schedule"], f'showDetail("{s}")', f"{cls}", f"schedButton{s}", "", f"Schedule {self.songDict[s]['TT']}") 
+		if self.rr[0] == "O":
+			actions += self.makeButton(self.constants["icons"]["schedule"], f'showDetail("{s}")', f"{cls}", f"schedButton{s}", "", f"Schedule {self.songDict[s]['TT']}") 
+		actions += self.metronomeButton(s, "N")
 		if self.songDict[s]["CS"] in [0, 1]:
 			actions += self.makeButton(self.constants["icons"]["chart"], f'showNote("N{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
-		actions += self.metronomeButton(s, "N")
 		for m in self.songDict[s]["SB"]:
 			actions += self.makeButton(m, f'showMedia("{self.songDict[s]["SB"][m]}")' , "chartText sz55", "", False, m)
 		for l in self.songDict[s]["LL"]:
@@ -1069,12 +1063,12 @@ categoryTitles = {
 				hidden += f'<td hidden>{self.songDict[s]["RN"]}</td><!--due(2)-->' 
 				hidden += f'<td hidden>{self.songDict[s]["RA"]}</td><!--RA(3)-->' 
 				hidden += f'<td hidden>{self.songDict[s]["RT"]}</td><!--RT(4)-->'
-				rh += f'<td class="detailLink"><a title="ID: {s}, Due: {self.songDict[s]["RN"]}, Last: {self.songDict[s]["RL"]}" class="chartText" href=javascript:doSearch("O{s}")>{self.songDict[s]["TT"]}</a></td>'
+				rh += f'<td class="detailLink">{self.songLink(s)}</td>'
 			else:
 				if self.songDict[s]["CS"] in [0, 1]:
-					rh += f'<td class="detailLink"><a title="Review and schedule {self.songDict[s]["TT"]}" class="chartText" href=javascript:showNote("N{s}")>{self.songDict[s]["TT"]}</a></td>'
+					rh += f'<td class="detailLink"><a title="Display chart for {self.songDict[s]["TT"]}" class="chartText" href=javascript:showNote("N{s}")>{self.songDict[s]["TT"]}</a></td>'
 				else:
-					rh += f'<td class="detailLink"><a title="Schedule {self.songDict[s]["TT"]}" class="chartText noChart" href=javascript:showDetail("{s}")>{self.songDict[s]["TT"]}</a></td>'
+					rh += f'<td class="detailLink"><a title="Details for {self.songDict[s]["TT"]}" class="chartText noChart" href=javascript:showDetail("{s}")>{self.songDict[s]["TT"]}</a></td>'
 			rh += hidden
 			rh += f'<td class="actions">{self.songLinkButtons(s)}</td>'
 		else:
@@ -1086,9 +1080,10 @@ categoryTitles = {
 				if (tag[0:1] == t):
 					if reviewMode:					# add checkbox for tag removal
 						if gotOne == False:
-							tags = f'{tags}<td class="tag_{tag}">'
+							tags = f'{tags}<td class="tag">'
 							gotOne = True
-						dd = f'''<input title="remove tag" type="checkbox" value="delete" onchange=enableSave() name="del{tag}" id="del{tag}">'''
+						hover = f'''<span class=hoverText>remove tag {tag}</span>'''
+						dd = f'''<div class=hoverContainer><input type="checkbox" value="delete" onchange=enableSave() name="del{tag}" id="del{tag}">{hover}</div>'''
 						tags += f'{self.tagLink(tag)} {dd} <br>'
 					else:
 						if gotOne:
@@ -1117,8 +1112,10 @@ categoryTitles = {
 		return rh
 	def tagLink(self, t):
 		tCount = len(self.tagDict[t[0]][t[1:]])
-		ttl = f' title="{tCount} songs"'
-		return f'<a{ttl} href=javascript:doSearch("{t}"); class="chartText">{t[1:]}</a>'
+		tName = t[1:]
+		tType = self.config["tagCtgs"][t[0]]["title"]
+		hover = f'<span class=hoverText><b>{tType}: {tName}:</b> {tCount} songs</span>'
+		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="chartText">{t[1:]}</a>{hover}</div>'
 	def newChangeRec(self):
 		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
 		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": False}
@@ -1462,27 +1459,20 @@ categoryTitles = {
 			for elem in line:	
 				# utils.writeLog(f'getChartMusicLine: {elem}')
 				inv = elem['M'].find('i')				# look for an inversion
-				add = elem['M'].find('add')				# look for an added interval
 				if elem['M'] > '0' and elem['M'] not in self.musicConstants["tokens"]:			# tokens are special characters and chords not integrated yet
 					if inv > -1:						# this is an inversion, split it into cPart and bPart
 						cPart = elem['M'][0:inv]	
 						bPart = elem['M'][inv + 1:]
-						chord = self.codeDB[cPart][key] 
-						symbol = self.codeDB[cPart]['symbol']
-					elif add > -1:
-						cPart = elem['M'][0:add]	
-						bPart = elem['M'][add:]
-						chord = self.codeDB[cPart][key] 
-						symbol = self.codeDB[cPart]['symbol']
+						chordInfo = self.breakDownChord(cPart, key)
+						chordInfo["chord"] = f'{chordInfo["chord"]}/{self.chordDB[key][chordInfo["chord"]]["notes"][int(bPart)]}' 
 					else:
-						chord = self.codeDB[elem['M']][key]
-						symbol = self.codeDB[elem['M']]['symbol']
-					title = f"{symbol}: {self.chordDB[key][chord]['notes']}" 
-					if inv > -1:
-						chord = f"{chord}/{self.chordDB[key][chord]['notes'][int(bPart)]}" 
-					elif add > -1:
-						chord = f'{chord}{bPart}' 
-					rh += f'<td title="{title}" class="chartMusic {addClass}">{chord}</td>' 
+						chordInfo = self.breakDownChord(elem['M'], key) 
+					# hoverText = f"<span class='hoverText'>{symbol}: {self.chordDB[key][chord]['notes']}</span>" 
+					hoverText = f"{chordInfo['symbol']}: {chordInfo['notes']}" 
+					# rh += f'<td><div class="chordContainer">{chord} {hoverText}</div></td>' 
+					# rh += f'<td title="{hoverText}" class="chartMusic {addClass}">{chordInfo["chord"]}</td>' 
+					rh += f'<td title="{hoverText}" class="chartMusic {addClass}"><table><tr><td class="chartMusic {addClass} note">{chordInfo["note"]}</td>'
+					rh += f'<td class="chartMusic {addClass} suffix">{chordInfo["suffix"]}</td></tr></table></td>' 
 				elif elem['M'] in self.musicConstants["tokens"]:				#chord we don't have yet and special characters
 					if elem["M"] == "?":
 						subclass = "error"
@@ -1492,6 +1482,20 @@ categoryTitles = {
 				else:
 					rh += '<td></td>'
 		return rh
+	def breakDownChord(self, code, key):
+		# input will be chord and key
+		# return {"chord": chord, "note": note, "suffix": suffix, "symbol": symbol}
+		chordInfo = {}
+		chordInfo["chord"] = self.codeDB[code][key]
+		chordInfo["symbol"] = self.codeDB[code]["symbol"]
+		if code[1:] == "M":
+			chordInfo["suffix"] = ""
+			chordInfo["note"] = chordInfo["chord"]
+		else:
+			chordInfo["suffix"] = code[1:]
+			chordInfo["note"] = chordInfo["chord"][0: -len(chordInfo["suffix"])]
+		chordInfo["notes"] = self.chordDB[key][chordInfo['chord']]['notes']
+		return chordInfo
 	def getChartTextLine(self, line, addClass):
 		rh = ''
 		for elem in line:	
@@ -1635,6 +1639,7 @@ categoryTitles = {
 	def getNewMetaRec(self):
 		# return default metaRecord for chart
 		return {"KEYIN": "X", "KEYOUT": "C", "TYPE": "M", "PATTERN": "MT"}
+s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
 # s = Songs('106932376942135580175', 'Olucas', '')
 # s = Songs('106932376942135580175', 'Othoryvo', '')
