@@ -54,8 +54,6 @@ print(f'''
 <link href='//fonts.googleapis.com/css?family=Didact Gothic' rel='stylesheet'>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<script src="https://apis.google.com/js/platform.js" async defer></script>
-<meta name="google-signin-client_id" content="932688745244-i4vfeap5jgu8id5dagrc49786vvs0qrf.apps.googleusercontent.com">
 </head>
 <body onload="loadJs('x');">
 <script>
@@ -166,7 +164,7 @@ else:
 						# print('sent {}, {}, {}, {}, {}, {}'.format(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
 						# 	form.getvalue('RN',''), form.getvalue('RL',''), form.getvalue('revNote', '')))
 						rev = sb.processInput(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
-							RN, form.getvalue('RL',''), form.getvalue('revNote', ''), form.getvalue('bpm', '120'), form.getvalue('meterString', 'A'), form.getvalue('noteResolution', '2'))
+							RN, form.getvalue('RL',''), form.getvalue('revNoteEdit', ''), form.getvalue('bpm', '120'), form.getvalue('meterString', 'A'), form.getvalue('noteResolution', '2'))
 					except Exception as e:
 						print(f'file error: {e}, changeRec is {changeRec}')
 				elif oper[0] == 'S':
@@ -179,9 +177,9 @@ else:
 				#response will send stuff back, then
 				sb = Songs.Songs(gid, rr, decks)
 				print(sb.jsFunctions())
+				# utils.writeLog(f"rev={rev}")
 				# put the message in the message area
-				renderHtml(f"<script>document.getElementById('message').innerHTML = '<span class=message>{rev}</span>'; ")
-				print('</script>')
+				renderHtml(f"<script>document.getElementById('message').innerHTML = '<div class=message>{rev}</div>'; </script>")
 			else:
 				print(sb.jsFunctions())
 		print('</div>')

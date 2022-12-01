@@ -19,7 +19,7 @@ def printErr(inp):
 		print(f'{line}<br>')
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '00K')						#songID or IMPORT
+s = form.getvalue('s', '03O')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
@@ -60,6 +60,7 @@ else:
 				CS = 0
 			if sb.songDict[s]['CS'] != CS: 
 				sb.songDict[s]['CS'] = CS
+				# utils.writeLog(f'recreating chart for {r[1:]}/{s}: {sb.songDict[s]["TT"]}')
 				rec = {"I": s, "D": str(sb.today), "S": 0, "N": "updated chart"}
 				src = sb.addReviewRecord(rec)
 			# utils.writeLog('sb.processNTtoCH returned {}'.format(rc[0]))

@@ -21,8 +21,8 @@ form = cgi.FieldStorage() # instantiate only once!
 		# elif qType == 'i':			#inactive
 		# elif qType == 'l':			#review ahead followed by number of days
 		# elif qType == 'm':			#admin.json file edit, no rslt
-		# elif qType == 'o':			#single song search by songId, will display in list form
-		# elif qType == 'O':			#single song search by songId, will display reviewArea
+		# elif qType == 'O':			#single song search by songId, will display in list form
+		# elif qType == 'o':			#single song search by songId, will display reviewArea
 		# elif qType == 'r':			#reviewed today
 		# elif qType == 's':			#config.json file edit, no rslt
 		# elif qType == 'u':			#update reviewHistory

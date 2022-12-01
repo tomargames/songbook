@@ -87,7 +87,7 @@ function scheduler() {
   }
 }
 
-function play() {
+function play(tempoButton) {
     if (!unlocked) {
     // play silent buffer to unlock the audio
     var buffer = audioContext.createBuffer(1, 1, 22050)
@@ -104,12 +104,13 @@ function play() {
     current16thNote = 0
     nextNoteTime = audioContext.currentTime
     timerWorker.postMessage("start")
-    // return "stop"
+    // console.log("metronome is playing, returning on")
+    return tempoButton
   } else {
     timerWorker.postMessage("stop")
-    // return "play"
+    // console.log("metronome is NOT playing, returning off")
+    return "off"
   }
-  return ""
 }
 
 function resetCanvas(e) {

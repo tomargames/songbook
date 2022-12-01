@@ -6,6 +6,7 @@ function loadJs(x)
 	sessionStorage.setItem('lastSortedCol', -1);
 	var rr = getFromLocal('songBookRR');
 	var dd = getFromLocal('songBookDD');
+	var metronomeStatus = "off";
 
 	// detect if you're on a phone, otherwise set for PC
 	// pixel 3a: 507 in portrait
@@ -243,7 +244,7 @@ function showNote(argument)
 	// console.log(inp);
 	window.onclick = function(event) {				// if you click outside the modal, it will always close
 		if (event.target == modal) {
-			modal.style.display = "none";
+			closeChart(modal);
 		}
 	}
 	xhttp.onreadystatechange = function() {
@@ -265,7 +266,7 @@ function showNote(argument)
 			page += 1;
 			showNote(argument.substring(0,1) + s + page);
 		} else {
-			modal.style.display = "none";
+			closeChart(modal);
 			if (argument.substring(0,1) == "N") {
 				showDetail(s);
 			}
@@ -276,6 +277,15 @@ function showNote(argument)
 	let r = document.gForm.rr.value;
 	xhttp.open("POST", "getNote.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp + '&w=' + window.innerWidth + '&h=' + window.innerHeight + "&page=" + page, true);
 	xhttp.send();
+}
+// Close the chart display modal
+function closeChart(modal) {
+	modal.style.display = "none";
+	if (metronomeStatus != "off") {
+		metronomeStatus.style.backgroundColor = "azure";
+		metronomeStatus = play(metronomeStatus);
+	}
+	// console.log("metronomeStatus is " + metronomeStatus);
 }
 // When the user clicks the button, open the modal
 function showHistory(s)
@@ -542,7 +552,7 @@ function activateMetronome(parameters) {
 		meterString = parameters.substring(8);
 	}
 	meter = meterString.length * 4;
-	play();
+	metronomeStatus = play(tempoButton);
 }
 function revByDate()
 {
@@ -641,7 +651,7 @@ function doSearch(s)
 function execSearch(s, upd = false)
 {
 	// alert('in execSearch with ' + s);
-	if (s.substring(0,1) == "O") {					// this is going to the edit screen, save songList and songDetail
+	if (s.substring(0,1) == "o") {					// this is going to the edit screen, save songList and songDetail
 		sessionStorage.setItem('songList', $("searchResults").innerHTML);
 	}
 	var xhttp = new XMLHttpRequest();
