@@ -330,10 +330,14 @@ table
   text-align: center;
   padding: 5px 0;
   border-radius: 6px;
- 
-  /* Position the tooltip text - see examples below! */
+   /* Position the tooltip text - see examples below! */
   position: absolute;
   z-index: 1;
+}
+.hoverText.songInfo {
+  width: 200px;
+  text-align: left;
+  padding: 10;
 }
 /* Show the tooltip text when you mouse over the tooltip container */
 .hoverContainer:hover .hoverText {

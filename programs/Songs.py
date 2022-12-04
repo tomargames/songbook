@@ -81,7 +81,7 @@ class Songs(object):
 			raise Exception(f'user not found for {gid}, ask marie to set you up')
 	def songLink(self, s):
 		songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
-		title = f'''<span class=hoverText><b>ID: </b>{s}, <b>Due:</b> {self.songDict[s]['RN']}, <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}, <b>Total:</b> {self.songDict[s]['RT']}, <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
+		title = f'''<span class='hoverText songInfo'><b>ID: </b>{s}<br> <b>Due:</b> {self.songDict[s]['RN']}<br> <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}<br> <b>Total:</b> {self.songDict[s]['RT']}<br> <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
 		display = f'''<div class=hoverContainer><a class=chartText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
 		# utils.writeLog(f'display is {display}')
 		return display
@@ -1464,7 +1464,8 @@ categoryTitles = {
 						cPart = elem['M'][0:inv]	
 						bPart = elem['M'][inv + 1:]
 						chordInfo = self.breakDownChord(cPart, key)
-						chordInfo["chord"] = f'{chordInfo["chord"]}/{self.chordDB[key][chordInfo["chord"]]["notes"][int(bPart)]}' 
+						# chordInfo["chord"] = f'{chordInfo["chord"]}/{self.chordDB[key][chordInfo["chord"]]["notes"][int(bPart)]}' 
+						chordInfo["suffix"] += f'/{chordInfo["notes"][int(bPart)]}'
 					else:
 						chordInfo = self.breakDownChord(elem['M'], key) 
 					# hoverText = f"<span class='hoverText'>{symbol}: {self.chordDB[key][chord]['notes']}</span>" 
@@ -1564,10 +1565,10 @@ categoryTitles = {
 			maxColumns = int(width/350)
 			maxLines = int(height/65)
 			border = maxColumns - 1
-			if width > 1300:
-				size = 60
-			else:
-				size = 70
+			# if width > 1300:
+			# 	size = 60
+			# else:
+			size = 70
 		# longestLine = 0
 		# for s in sets:
 		# 	numLines += 1 + len(s["lines"])
