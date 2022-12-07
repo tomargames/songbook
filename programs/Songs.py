@@ -81,7 +81,7 @@ class Songs(object):
 			raise Exception(f'user not found for {gid}, ask marie to set you up')
 	def songLink(self, s):
 		songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
-		title = f'''<span class='hoverText songInfo'><b>ID: </b>{s}<br> <b>Due:</b> {self.songDict[s]['RN']}<br> <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}<br> <b>Total:</b> {self.songDict[s]['RT']}<br> <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
+		title = f'''<span class="hoverText songInfo"><b>ID: </b>{s}<br> <b>Due:</b> {self.songDict[s]['RN']}<br> <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}<br> <b>Total:</b> {self.songDict[s]['RT']}<br> <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
 		display = f'''<div class=hoverContainer><a class=chartText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
 		# utils.writeLog(f'display is {display}')
 		return display
@@ -802,7 +802,12 @@ categoryTitles = {
 		rh += '</tr></thead><tbody>'
 		return f"<tr>{rh}</tr>"
 	def makeButton(self, value, onclick, style, id, disabled, title):
-		return f'''<input title="{title}" type="button" class="{style}" value="{value}" onClick={onclick}; id="{id}" {disabled}>'''
+
+		# songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
+		title = f'''<span class="hoverText songInfo">{title}</span>'''
+		# display = f'''<div class=hoverContainer><a class=chartText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
+
+		return f'''<div class=hoverContainer><input type="button" class="{style}" value="{value}" onClick={onclick}; id="{id}" {disabled}>{title}</div>'''
 	def fieldDisplay(self, f, s):
 		if f in self.constants["fields"]:
 			rh = f'<b>{self.constants["fields"][f]["title"]}: </b>{self.songDict[s][f]}' 
@@ -1227,6 +1232,7 @@ categoryTitles = {
 										for c in range(len(CH[1][s]["lines"][l])):						# for each cell in the line
 											if CH[1][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
 												if songId in chordUsageDict[CH[1][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
+													# utils.writeLog(f"hit the line where it might abend")
 													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
 												else:
 													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
