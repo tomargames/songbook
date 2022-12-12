@@ -236,6 +236,7 @@ class Songs(object):
 			if n != note:
 				# toDo: log this as part of the updateReview process
 				utils.writeLog(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
+				self.chordErr = True
 				return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
 		utils.writeLog(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
 	def addChord(self, key, chord, curSet):
@@ -802,11 +803,8 @@ categoryTitles = {
 		rh += '</tr></thead><tbody>'
 		return f"<tr>{rh}</tr>"
 	def makeButton(self, value, onclick, style, id, disabled, title):
-
 		# songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
 		title = f'''<span class="hoverText songInfo">{title}</span>'''
-		# display = f'''<div class=hoverContainer><a class=chartText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
-
 		return f'''<div class=hoverContainer><input type="button" class="{style}" value="{value}" onClick={onclick}; id="{id}" {disabled}>{title}</div>'''
 	def fieldDisplay(self, f, s):
 		if f in self.constants["fields"]:
@@ -873,17 +871,10 @@ categoryTitles = {
 		js = "importChart(); "
 		importButton = f'<td>{self.makeButton("ImportChart", js, "chartText sz55", "importButton", "", "Import chart input from another repository" )}</td>'
 		metronomeButton = f'<td>{self.metronomeButton(s, "Y")}</td>'
-		pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{s}.pdf')
-		# utils.writeLog(f"reviewArea: looking for {pdfFile}")
-		if (os.path.exists(pdfFile)):
-			js = f"openLink('../data/{self.rr[1:]}/pdfs/{s}.pdf'); "
-			pdfButton = f'<td><img src="../js/pdfIcon.png" alt="chart pdf" onclick="{js}"></td>'
-		else:
-			pdfButton = ''	
-		# utils.writeLog(f"reviewArea: button is {pdfButton}")
+		pdfButton = f'<td>{self.pdfButton(s)}</td>'
+		# utils.writeLog(f'pdf button for {self.songDict[s]["TT"]} is {pdfButton}')
 		for m in self.songDict[s]["SB"]:
-			button = self.makeButton(m, f'showMedia("{self.songDict[s]["SB"][m]}")' , "chartText sz55", "", False, m)
-			userButtons +=  f'<td>{button}</td>'
+			userButtons +=  f'<td>{self.mediaButton(s, m, "Y")}</td>'
 		for l in self.songDict[s]["LL"]:
 			userButtons += f'<td>{self.llButton(s, l, "Y")}</td>'
 		buttons = f"<table><tr class=reviewTitle>{saveButton}{schedButton}{metronomeButton}{chartButton}{pdfButton}{paletteButton}{userButtons}{historyButton}{copyButton}{importButton}{cancelButton}</tr></table>" 
@@ -1026,19 +1017,50 @@ categoryTitles = {
 		else:
 			cls = "chartText sz55"
 		return self.makeButton(label, f'openLink("{self.songDict[s]["LL"][l]}")' , f"{cls}", "", False, title)
+	def mediaButton(self, s, l, editScreen):
+		def getClass():
+			if editScreen == "Y":
+				return "pnlButton"
+			else:
+				return "chartText sz80 bgButton"
+		label = title = l
+		fileName = self.songDict[s]["SB"][l]
+		if len(l) >= 5 and l.upper()[0:5] == "SHEET":
+			label = self.constants["icons"]["sheet"]
+			title = "Sheet music"
+			cls = getClass()
+		elif fileName.find(".mp3") > 0:
+			label = self.constants["icons"]["audio"]
+			title = fileName[0:-4]
+			cls = getClass()
+		else:
+			cls = "chartText sz55"
+		# button = self.makeButton(m, f'showMedia("{self.songDict[s]["SB"][m]}")' , "chartText sz55", "", False, m)
+		return self.makeButton(label, f'showMedia("{self.songDict[s]["SB"][l]}")' , f"{cls}", "", False, title)
 	def songLinkButtons(self, s):
 		actions = ''
 		cls = "chartText sz80 bgButton"
 		if self.rr[0] == "O":
-			actions += self.makeButton(self.constants["icons"]["schedule"], f'showDetail("{s}")', f"{cls}", f"schedButton{s}", "", f"Schedule {self.songDict[s]['TT']}") 
-		actions += self.metronomeButton(s, "N")
+			button = self.makeButton(self.constants["icons"]["schedule"], f'showDetail("{s}")', f"{cls}", f"schedButton{s}", "", f"Schedule {self.songDict[s]['TT']}") 
+			actions += f'<td>{button}</td>'
+		actions += f'<td>{self.metronomeButton(s, "N")}</td>'
 		if self.songDict[s]["CS"] in [0, 1]:
-			actions += self.makeButton(self.constants["icons"]["chart"], f'showNote("N{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
+			button = self.makeButton(self.constants["icons"]["chart"], f'showNote("N{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
+			actions += f'<td>{button}</td>'
 		for m in self.songDict[s]["SB"]:
-			actions += self.makeButton(m, f'showMedia("{self.songDict[s]["SB"][m]}")' , "chartText sz55", "", False, m)
+			button = self.mediaButton(s, m, "N")
+			actions += f'<td>{button}</td>'
 		for l in self.songDict[s]["LL"]:
-			actions += self.llButton(s, l, "N")
-		return actions
+			button = self.llButton(s, l, "N")
+			actions += f'<td>{button}</td>'
+		actions += f'<td>{self.pdfButton(s)}</td>'
+		return f'<table><tr valign="top">{actions}</tr></table>'
+	def pdfButton(self, s):
+		pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{s}.pdf')
+		if (os.path.exists(pdfFile)):
+			js = f"openLink('../data/{self.rr[1:]}/pdfs/{s}.pdf'); "
+			return f'<div class=hoverContainer><img src="../js/pdfIcon.png" alt="chart pdf" onclick="{js}"><span class="hoverText songInfo">Chart pdf</span></div>'
+		return ''
 	def displaySong(self, s, reviewMode):
 		# assemble rh for table display, and det for detail view to store in js object songDetails
 		tags = hidden = ''				
@@ -1253,6 +1275,7 @@ categoryTitles = {
 										else:
 											musicLine = textLine = ''
 											for c in CH[1][s]["lines"][l]:						# for each cell in the line
+												# utils.writeLog(f'pdf processing for set {s} line {l} cell {c}')
 												# size of cell will be longer of len(M) and len(T) + 1
 												txtLength = 0 if "T" not in c else len(c["T"])
 												chord = self.getChordNameInKey(c["M"], key)
@@ -1437,29 +1460,22 @@ categoryTitles = {
 	def getChordNameInKey(self, code, key):
 		chord = cPart = bPart = ''
 		inv = code.find('i')				# look for an inversion
-		add = code.find('add')				# look for an added interval
 		if code > '0' and code not in self.musicConstants["tokens"]:			# tokens are special characters and chords not integrated yet
 			if inv > -1:						# this is an inversion, split it into cPart and bPart
 				cPart = code[0:inv]	
 				bPart = code[inv + 1:]
-				chord = self.codeDB[cPart][key] 
-			elif add > -1:
-				cPart = code[0:add]	
-				bPart = code[add:]
-				chord = self.codeDB[cPart][key] 
+				chordInfo = self.breakDownChord(cPart, key)
+				chordInfo["suffix"] += f'/{chordInfo["notes"][int(bPart)]}'
 			else:
-				chord = self.codeDB[code][key]
-			if inv > -1:
-				chord = f"{chord}/{self.chordDB[key][chord]['notes'][int(bPart)]}" 
-			elif add > -1:
-				chord = f'{chord}{bPart}' 
-		elif code in self.musicConstants["tokens"]:				#chord we don't have yet and special characters
-			chord = code
-		return chord
+				chordInfo = self.breakDownChord(code, key) 
+			return f'{chordInfo["note"]}{chordInfo["suffix"]}'
+		elif code in self.musicConstants["tokens"]:
+			return code
+		else:
+			return ''
 	def getChartMusicLine(self, key, line, addClass):
 		rh = ''
 		bPart = ''
-		symbol = ''
 		# utils.writeLog(f'Songs.getChartMusicLine: {addClass}')
 		if line[0]['M'] != 'X':
 			for elem in line:	
@@ -1493,6 +1509,7 @@ categoryTitles = {
 		# input will be chord and key
 		# return {"chord": chord, "note": note, "suffix": suffix, "symbol": symbol}
 		chordInfo = {}
+		key = self.setKey(key)
 		chordInfo["chord"] = self.codeDB[code][key]
 		chordInfo["symbol"] = self.codeDB[code]["symbol"]
 		if code[1:] == "M":
