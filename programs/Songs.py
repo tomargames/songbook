@@ -834,7 +834,7 @@ categoryTitles = {
 		return f'<input type="{field["type"]}" oninput=enableSave() size="50" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
 	def addDictButton(self, f):
 		js = f"addEntry('{f}'); " 
-		return self.makeButton(f'+ {self.constants["fields"][f]["title"]}', js, "tagButton", f"add{f}" , False, "Add entry")
+		return self.makeButton(f'+ {self.constants["fields"][f]["title"]}', js, "tagButton", f"add{f}" , False, "Add entry<br>Labels:<br>AUDIO<br>VIDEO<br>WIKI<br>SHEET")
 	def dictFieldEdit(self, f, s):
 		# this will display all the existing entries in the dict, and then one blank one that will be disabled, but have a set button
 		# each row will be type  label  value
@@ -999,44 +999,40 @@ categoryTitles = {
 		rh += f'<tr><td colspan="2" style="text-align: center; ">{revNote}</td></tr>' 
 		rh = f'<table border=1>{rh}</table>'
 		return rh
-	def llButton(self, s, l, editScreen):
+	def getCannedLabel(self, l, editScreen, fileName):
 		def getClass():
 			if editScreen == "Y":
 				return "pnlButton"
 			else:
 				return "chartText sz80 bgButton"
-		label = title = l
+		labelInfo = {}
 		if len(l) >= 3 and l.upper()[0:4] == "WIKI":
-			label = self.constants["icons"]["wiki"]
-			title = "Wikipedia entry"
-			cls = getClass()
-		elif len(l) >= 3 and l.upper()[0:7] == "YOUTUBE":
-			label = self.constants["icons"]["youtube"]
-			title = "YouTube video"
-			cls = getClass()
+			labelInfo["label"] = self.constants["icons"]["wiki"]
+			labelInfo["title"] = "Wikipedia entry"
+			labelInfo["class"] = getClass()
+		elif len(l) >= 3 and l.upper()[0:7] == "YOUTUBE" or len(l) >= 5 and l.upper()[0:5] == "VIDEO":
+			labelInfo["label"] = self.constants["icons"]["video"]
+			labelInfo["title"] = "Video"
+			labelInfo["class"] = getClass()
+		elif len(l) >= 5 and l.upper()[0:5] == "SHEET":
+			labelInfo["label"] = self.constants["icons"]["sheet"]
+			labelInfo["title"] = "Sheet music"
+			labelInfo["class"] = getClass()
+		elif fileName.find(".mp3") > 0 or len(l) >= 5 and l.upper()[0:5] == "AUDIO":
+			labelInfo["label"] = self.constants["icons"]["audio"]
+			labelInfo["title"] = fileName[0:-4]
+			labelInfo["class"] = getClass()
 		else:
-			cls = "chartText sz55"
-		return self.makeButton(label, f'openLink("{self.songDict[s]["LL"][l]}")' , f"{cls}", "", False, title)
+			labelInfo["label"] = l
+			labelInfo["title"] = l
+			labelInfo["class"] = "chartText sz55"
+		return labelInfo
+	def llButton(self, s, l, editScreen):
+		labelInfo = self.getCannedLabel(l, editScreen, '')
+		return self.makeButton(labelInfo["label"], f'openLink("{self.songDict[s]["LL"][l]}")' , labelInfo["class"], "", False, labelInfo["title"])
 	def mediaButton(self, s, l, editScreen):
-		def getClass():
-			if editScreen == "Y":
-				return "pnlButton"
-			else:
-				return "chartText sz80 bgButton"
-		label = title = l
-		fileName = self.songDict[s]["SB"][l]
-		if len(l) >= 5 and l.upper()[0:5] == "SHEET":
-			label = self.constants["icons"]["sheet"]
-			title = "Sheet music"
-			cls = getClass()
-		elif fileName.find(".mp3") > 0:
-			label = self.constants["icons"]["audio"]
-			title = fileName[0:-4]
-			cls = getClass()
-		else:
-			cls = "chartText sz55"
-		# button = self.makeButton(m, f'showMedia("{self.songDict[s]["SB"][m]}")' , "chartText sz55", "", False, m)
-		return self.makeButton(label, f'showMedia("{self.songDict[s]["SB"][l]}")' , f"{cls}", "", False, title)
+		labelInfo = self.getCannedLabel(l, editScreen, self.songDict[s]["SB"][l])
+		return self.makeButton(labelInfo["label"], f'showMedia("{self.songDict[s]["SB"][l]}")', labelInfo["class"], "", False, labelInfo["title"])
 	def songLinkButtons(self, s):
 		actions = ''
 		cls = "chartText sz80 bgButton"
