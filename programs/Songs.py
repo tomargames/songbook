@@ -1234,7 +1234,7 @@ categoryTitles = {
 					if "NT" in changeRec and changeRec["NT"] == True:
 						# processNTtoCH returns (rc, record)
 						try:
-							CH = self.processNTtoCH(self.songDict[songId]['NT'])
+							CH = self.processNTtoCH(self.songDict[songId]['NT'], songId)
 							if CH[0] == 'good' or CH[0] == 'err1':
 								# now optimize before saving to reviewCharts file
 								# newRec = self.revChartProcess(CH[1])
@@ -1368,7 +1368,7 @@ categoryTitles = {
 		S["meta"] = metaRecord
 		S["lines"] = []
 		return S
-	def processNTtoCH(self, NT):
+	def processNTtoCH(self, NT, s):
 		self.chordErr = False
 		lines = []
 		curLine = 0
@@ -1446,15 +1446,14 @@ categoryTitles = {
 					needLyric = self.addLyric(curSet, lines, curLine, startPos, 999)
 					curLine += len(metaRecord["PATTERN"])
 		except Exception as e:
-			utils.writeLog(f'processNTtoCH ERROR: {e}, line {curLine}: {lines[curLine]}' )
-			return ('err5', [], '')								# err5: unknown as yet
+			return ('err5', [], f'processNTtoCH ERROR: {e}, line {curLine}: {lines[curLine]}')								# err5: unknown as yet
 		curSet["meta"]["end"] = offset
 		record.append(curSet)
 		if self.chordErr == True:
 			return ('err1', record, baseKey)
 		return ('good', record, baseKey)
 	def getChordNameInKey(self, code, key):
-		chord = cPart = bPart = ''
+		cPart = bPart = ''
 		inv = code.find('i')				# look for an inversion
 		if code > '0' and code not in self.musicConstants["tokens"]:			# tokens are special characters and chords not integrated yet
 			if inv > -1:						# this is an inversion, split it into cPart and bPart

@@ -19,7 +19,7 @@ def printErr(inp):
 		print(f'{line}<br>')
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '03O')						#songID or IMPORT
+s = form.getvalue('s', '02M')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
@@ -52,8 +52,10 @@ else:
 		# else:
 		# 	utils.writeLog(inp)
 		# utils.writeLog(f'getNote.py: song coming in is {s}, inp is {inp}')
+		chMade = False
 		try:
-			rc = sb.processNTtoCH(inp)
+			rc = sb.processNTtoCH(inp, s)
+			chMade = True
 			if rc[0] != 'good':
 				CS = int(rc[0][3])
 			else:
@@ -66,10 +68,13 @@ else:
 			# utils.writeLog('sb.processNTtoCH returned {}'.format(rc[0]))
 			if rc[0] == 'good' or rc[0] == 'err1':				# rc is (rc, record, outKey)
 				print(Songs.renderHtml(sb.displayChart(rc[1], int(w), int(h), int(page), fresh, s)))			# output written to screen, if t is "phone", results limited to one column
+			elif rc[0] == 'err5':				# rc is (rc, record, outKey)
+				print(f'{rc[2]}: {rc[0]}<br><hr><br>')
+				printErr(inp)
 			else:
 				print(f'{s}: {sb.songDict[s]["TT"]}: {rc[0]}<br><hr><br>')
 				printErr(inp)
 		except Exception as ee:
-			print(f'getNote: ERROR reading chart input: {ee}<br><hr>')
+			print(f'getNote: chMade is {chMade}, uncaught ERROR: {ee}<br><hr>')
 			printErr(inp)
 		
