@@ -11,9 +11,9 @@ body
 }
 input
 {
-  background-color: azure;
+  background-color: lavender;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: 1em;
   border-radius: 5px;
 }
 select
@@ -24,6 +24,10 @@ select
 table
 {
   font-size: 1.1em;
+}
+.chartModal
+{
+  display: flex;
 }
 .smallmodal 
 {
@@ -61,7 +65,7 @@ table
   margin: auto;
   padding: 1px;
   border: 1px solid #888;
-  width: 98%;
+  width: 99%;
 }
 .close 
 {
@@ -98,66 +102,20 @@ table
 	color: beige;
 	background-color: #333;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: .8em;
   padding: 5px;
 }
-.chartMeta.sz90
+.listText
 {
-  font-size: 1em;
-}
-.chartMeta.sz80
-{
+	color: black;
+  font-weight: bold;
   font-size: .9em;
-}
-.chartMeta.sz70
-{
-  font-size: .8em;
-}
-.chartMeta.sz60
-{
-  font-size: .7em;
-}
-.chartMeta.sz65
-{
-  font-size: .75em;
-}
-.chartMeta.sz55
-{
-  font-size: .65em;
 }
 .chartText
 {
 	color: black;
   font-weight: bold;
-  font-size: 1em;
-}
-.chartText.sz90
-{
-  font-size: .9em;
-}
-.chartText.sz80
-{
   font-size: .8em;
-}
-.chartText.sz70
-{
-  font-size: .7em;
-}
-.chartText.sz60
-{
-  font-size: .6em;
-}
-.chartText.sz65
-{
-  font-size: .65em;
-}
-.chartText.sz55
-{
-  font-size: .55em;
-}
-.chartText.noChart
-{
-  font-weight: normal;
 }
 .chartMusic:hover
 {
@@ -167,7 +125,7 @@ table
 {
 	color: black;
   font-weight: bold;
-  font-size: 1.1em;
+  font-size: .9em;
   padding: 1;
   border: 1px solid #AAA;
   border-radius:12px;
@@ -193,30 +151,6 @@ table
   border: none;
   color: blue;
   padding: 0;
-}
-.chartMusic.sz90
-{
-  font-size: 1em;
-}
-.chartMusic.sz80
-{
-  font-size: .9em;
-}
-.chartMusic.sz70
-{
-  font-size: .8em;
-}
-.chartMusic.sz60
-{
-  font-size: .7em;
-}
-.chartMusic.sz65
-{
-  font-size: .75em;
-}
-.chartMusic.sz55
-{
-  font-size: .65em;
 }
 .NTinput
 {
@@ -259,6 +193,12 @@ table
   background-color:azure;
   color: black;
   font-size: 0.6em;
+}
+.chartButton
+{
+  background-color:azure;
+  color: black;
+  font-size: .9em;
 }
 .pnlButton:hover,
 .pnlButton:focus 

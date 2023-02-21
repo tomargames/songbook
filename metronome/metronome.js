@@ -87,7 +87,8 @@ function scheduler() {
   }
 }
 
-function play(tempoButton) {
+function play() {
+    alert("called play");
     if (!unlocked) {
     // play silent buffer to unlock the audio
     var buffer = audioContext.createBuffer(1, 1, 22050)
@@ -96,16 +97,14 @@ function play(tempoButton) {
     node.start(0)
     unlocked = true
   }
-
   isPlaying = !isPlaying
-
   if (isPlaying) {
     // start playing
     current16thNote = 0
     nextNoteTime = audioContext.currentTime
     timerWorker.postMessage("start")
     // console.log("metronome is playing, returning on")
-    return tempoButton
+    return "on"
   } else {
     timerWorker.postMessage("stop")
     // console.log("metronome is NOT playing, returning off")
@@ -115,9 +114,9 @@ function play(tempoButton) {
 
 function resetCanvas(e) {
   // resize the canvas - but remember - this clears the canvas too.
-  canvas.width = window.innerWidth
+  canvas.width = window.innerWidth/2
   canvas.height = 60          // put back to 40
-
+  
   //make sure we scroll to the top left.
   window.scrollTo(0, 0)
 }
@@ -133,7 +132,6 @@ function draw() {
 
   // We only need to draw if the note has moved.
   if (last16thNoteDrawn != currentNote) {
-    // console.log("drawing, note is " + currentNote);
     // var x = Math.floor(canvas.width / 18)
     var x = Math.floor(canvas.width / 60)
     canvasContext.clearRect(0, 0, canvas.width, canvas.height)
@@ -141,6 +139,7 @@ function draw() {
       canvasContext.fillStyle = (currentNote == i) ? ((currentNote % 4 === 0) ? "red" : "blue") : "black";
       canvasContext.fillRect(x * (i + 1), x, x / 2, x / 2);
     }
+    // alert("drawing, note is " + currentNote);
     last16thNoteDrawn = currentNote
   }
   // set up to draw again
@@ -148,20 +147,6 @@ function draw() {
 }
 
 async function init() {
-  var container = document.createElement("div")
-  var metronomeDiv = $("metronome")
-  container.className = "container"
-  container.id = "container"
-  canvas = document.createElement("canvas")
-  canvasContext = canvas.getContext("2d")
-  // canvas.width = window.innerWidth
-  // canvas.height = window.innerHeight
-  resetCanvas();
-  // document.body.appendChild(container)
-  container.appendChild(canvas)
-  metronomeDiv.appendChild(container)
-  canvasContext.strokeStyle = "#ffffff"
-  canvasContext.lineWidth = 2
 
   // NOTE: THIS RELIES ON THE MONKEYPATCH LIBRARY BEING LOADED FROM
   // Http://cwilso.github.io/AudioContext-MonkeyPatch/AudioContextMonkeyPatch.js
@@ -200,6 +185,5 @@ timerWorker.onmessage = function (e) {
   }
   timerWorker.postMessage({ interval: lookahead })
 }
-
 // window.addEventListener("load", init)
 // console.log("init ran, audioContext is " + audioContext)
