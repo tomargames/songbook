@@ -15,7 +15,7 @@ import utils
 
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '02M')						#songID or IMPORT
+s = form.getvalue('s', '0D2')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
@@ -28,31 +28,33 @@ except Exception as e:
 	print(f'error instantiating songbook: {e}')
 else:
 	try:
-		utils.writeLog(f"in getCH for song {s}, inp is {inp}")
+		# utils.writeLog(f"in getCH for song {s}, inp is {inp}")
 		CH = {}
 		if inp == '':
-			utils.writeLog(f"no input, will use stored record for {s}")
+			# utils.writeLog(f"no input, will use stored record for {s}")
 			fileName = 'reviewCharts'
 			filePath = os.path.join(root, 'songbook/data', r[1:], f'{fileName}.json')		
 			with open(filePath,'r',encoding='utf8') as cards:
 				songCharts = json.load(cards)
 			CH = songCharts[s]
-			utils.writeLog(f"CH is {CH}")
+			# utils.writeLog(f"CH is {CH}")
 		else:
 			utils.writeLog(f"input, will call createChartRecord for {s}")
 			CH = sb.createChartRecord(inp, s)
-		utils.writeLog("nothing coded past here, so disregard")
 		outrec = []
-		for set in CH["sets"]:				# type: ignore
+		counter = [0, 0]
+		for set in CH["sets"]:
+			counter[1] = 0
 			outrec.append({"meta": {}, "lines": []})
 			outrec[-1]["meta"]["key"] = set["meta"]["KEYOUT"]
 			outrec[-1]["meta"]["pattern"] = set["meta"]["PATTERN"]
 			outrec[-1]["meta"]["type"] = sb.constants["chartSetTypes"][set["meta"]["TYPE"]]
-			outrec[-1]["meta"]["bpm"] = set["meta"]["bpm"]
-			outrec[-1]["meta"]["noteRes"] = set["meta"]["noteRes"]
-			outrec[-1]["meta"]["meter"] = set["meta"]["meter"]
+			outrec[-1]["meta"]["bpm"] = set["meta"]["BPM"]
+			outrec[-1]["meta"]["noteRes"] = set["meta"]["RES"]
+			outrec[-1]["meta"]["meter"] = set["meta"]["METER"]
 			for line in set["lines"]:
 				if line[0]['M'] != 'X':
+					# utils.writeLog(f"in loop for set: {counter[0]}, line {counter[1]}")
 					outrec[-1]["lines"].append([])
 					for elem in line:
 						outrec[-1]["lines"][-1].append(elem)
@@ -69,8 +71,10 @@ else:
 							outrec[-1]["lines"][-1][-1]["M"] = chordInfo
 				else:
 					outrec[-1]["lines"].append(line)
-		CHrecord = CH[:]
-		CHrecord["sets"] = outrec #type: ignore
+				counter[1] += 1
+			counter[0] += 1
+		CHrecord = CH
+		CHrecord["sets"] = outrec 
 		print(json.dumps(CHrecord))
 	except Exception as ee:
 		print(f'getCH, uncaught ERROR: {ee}<br><hr>')

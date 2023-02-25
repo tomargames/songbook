@@ -35,11 +35,6 @@ def noDupes(duplicate):
 		if num not in final_list: 
 			final_list.append(num) 
 	return final_list 
-def htmlSpaces(nmbr):
-	rh = ''
-	for i in range(nmbr):
-		rh += '&nbsp;'
-	return rh
 
 class Songs(object):
 	#check gid against admin file
@@ -62,7 +57,6 @@ class Songs(object):
 		fileName = os.path.join(self.root, 'songbook/data', 'constants.json')		# constants across all repositories
 		with open(fileName,'r',encoding='utf8') as cfg:
 			self.constants = json.load(cfg)
-		self.chordErr = False
 		self.rr = rr					#rr will be role then repository: Omarie, Uchris, etc.
 		self.roleList = []				#keep a role list for dropdown selection
 		for u in self.reposDict:
@@ -186,8 +180,6 @@ class Songs(object):
 		return rev
 	def addLyric(self, curSet, lines, curLine, start, end):
 		if 'T' in curSet["meta"]["PATTERN"]:
-			if end == 999:
-				end = len(lines[curLine + 1]) 
 			curSet["lines"][-1][-1]["T"] = lines[curLine + 1][start: end].rstrip()
 		return False
 	def notationCleanUp(self, chord):
@@ -207,8 +199,7 @@ class Songs(object):
 			for i in range(len(self.chordDB[key][chord[0:slash]]["notes"])):
 				if bPart == self.chordDB[key][chord[0:slash]]["notes"][i]:
 					return f'{code}{i}'
-			utils.writeLog(f'returning ? for {chord} in key {key}, inversion error')
-			self.chordErr = True
+			self.errors.append(f'returning ? for {chord} in key {key}, inversion error')
 			return '?'
 		else:
 			return self.findChordInDB(chord, key)
@@ -223,8 +214,7 @@ class Songs(object):
 		if chord[0] in self.musicConstants["tokens"]:
 			token = chord[0]
 		else:
-			utils.writeLog(f'returning ? for {chord} in key {key}, unknown token {token}')
-			self.chordErr = True
+			self.errors.append(f'returning ? for {chord} in key {key}, unknown token {token}')
 		return token
 	def getAlternateNote(self, chord, length, key):
 		note = chord[0:length]
@@ -232,10 +222,12 @@ class Songs(object):
 		for n in self.musicConstants["pitches"][pitch]:
 			if n != note:
 				# toDo: log this as part of the updateReview process
-				# utils.writeLog(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
-				# self.chordErr = True
-				return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
-		utils.writeLog(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
+				if f"{n}{chord[length:]}" in self.chordDB[key]:
+					self.errors.append(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
+					return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
+				else:
+					self.errors.append(f"{n}{chord[length:]} not in {key}, what's going on?")
+		self.errors.append(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
 	def addChord(self, key, chord, curSet):
 		# utils.writeLog(f'addChord for chord {chord}, key {key}')
 		chord = self.notationCleanUp(chord)
@@ -1216,7 +1208,7 @@ categoryTitles = {
 					chordUsageDict = json.load(u)
 				sizeInSong = len(revSongDict)
 				sizeInDate = len(revDateDict)
-				chartErrors = []
+				self.errors = []
 				for r in trigList:
 					songId = r["I"]
 					revDate = r["D"]
@@ -1288,7 +1280,7 @@ categoryTitles = {
 							if CH[0] != 'good':
 								# collect messages
 								self.songDict[songId]['CS'] = int(CH[0][3])
-								chartErrors.append(f'{songId}: {self.songDict[songId]["TT"]}, {CH[0]}' )
+								self.errors.append(f'{songId}: {self.songDict[songId]["TT"]}, {CH[0]}' )
 							else:
 								self.songDict[songId]['CS'] = 0
 						except Exception as e:
@@ -1350,7 +1342,7 @@ categoryTitles = {
 					rcc = utils.saveFile(chartFile[:-5], revChartDict, True)		#save dateHistory
 					rcu = utils.saveFile(chordFile[:-5], chordUsageDict, True)		#save dateHistory
 					message = f'songBook: {rcb}<br> reviewSongs: {rcs}<br> reviewDates: {rcd}<br> reviewCharts: {rcc}<br> chordUsage: {rcu} <br>' 
-					for e in chartErrors:
+					for e in self.errors:
 						message += f'{e}<br>' 
 			else:
 				message = 'No updates necessary'
@@ -1369,20 +1361,21 @@ categoryTitles = {
 	def createChartRecord(self, NT, s):
 		CHrec = {}
 		CHrec["title"] = self.songDict[s]["TT"]
-		CHrec["sets"] = []
-		CHrec["status"] = "good"
+		self.errors = []								# will hold accumulated errors
+		sets = []
+		curSet = {}
 		lines = NT.split('↩️')
-		if lines[0][0] != '[' or len(lines[0]) < 3:			#start a new set
-			CHrec["status"] = "First line not metaline"	
+		if len(lines) < 3 or len(lines[0]) == 0:
+			self.errors.append("No chart input data")	
+		elif lines[0][0] != '[':
+			self.errors.append("First line not metaline")	
 		elif lines[0][7] == 'X':
-			CHrec["status"] = "Chart not set up yet"	
+			self.errors.append("Chart not set up yet")	
 		else:
-			sets = []
 			curLine = 1
 			needLyric = False
 			metaRecord = self.chartMetaLine(lines[0], self.getNewMetaRec(), 0)
 			inKey = metaRecord['KEYIN'] = self.setKey(self.notationCleanUp(metaRecord['KEYIN']))
-			# metaRecord['KEYOUT'] = outKey = self.setKey(self.notationCleanUp(metaRecord['KEYOUT']))
 			curSet = self.newSet(metaRecord)
 			chord = ''							# this will collect characters until you have a chord
 			while curLine < len(lines):
@@ -1400,7 +1393,6 @@ categoryTitles = {
 						metaRecord = self.chartMetaLine(lines[curLine], curSet["meta"], curLine)
 						curSet = self.newSet(metaRecord)
 						inKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYIN"]))
-						# outKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYOUT"]))
 					curLine += 1			# always go to the next line after a metaLine
 					continue
 				else:
@@ -1429,8 +1421,9 @@ categoryTitles = {
 					chord = ''
 					needLyric = self.addLyric(curSet, lines, curLine, startPos, 999)
 					curLine += len(metaRecord["PATTERN"])
-		if self.chordErr == "True":
-			CHrec["status"] = "Chord error"
+		sets.append(curSet)
+		CHrec["sets"] = sets
+		CHrec["errors"] = self.errors				# add errors to status list
 		return CHrec
 	def getChordNameInKey(self, code, key):
 		cPart = bPart = ''
@@ -1485,12 +1478,12 @@ categoryTitles = {
 				if keyword in ['KEYIN', 'KEYOUT']:
 					values[1] = self.notationCleanUp(values[1])
 				elif keyword == "TYPE" and values[1] not in self.constants["chartSetTypes"]:
-					utils.writeLog(f'Songs.py: chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, defaulting to M')
+					self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
 					values[1] = "M"
 				meta[keyword] = values[1]
 			else:
-				utils.writeLog(f'Songs.py: chartMetaLine: Unknown metaKeyword {inp}: ignoring')
-		return meta
+				self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {inp} on line {lineNumber}: {strng}')
+		return (meta)
 	def getNewMetaRec(self):
 		# return default metaRecord for chart
 		return {"KEYIN": "X", "KEYOUT": "C", "TYPE": "M", "PATTERN": "MT", "BPM": "000", "RES": "2", "METER": "A"}
