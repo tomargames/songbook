@@ -35,6 +35,13 @@ def noDupes(duplicate):
 		if num not in final_list: 
 			final_list.append(num) 
 	return final_list 
+def getAppFolder():
+	appFolder = os.getcwd()
+	appFolderIndex = appFolder.find("tomargames.xyz") + 15
+	appFolder = (appFolder[appFolderIndex:]).split("\\")[0]
+	appFolder = (appFolder).split("/")[0]
+	# utils.writeLog(f"songbook currently running in folder {appFolder}")
+	return appFolder
 
 class Songs(object):
 	#check gid against admin file
@@ -42,19 +49,20 @@ class Songs(object):
 	#if user owns a file, but it a user of filed owned by someone else
 	def __init__(self, gid, rr, deckString):
 		self.root = os.environ['ToMarRoot']
-		fileName = os.path.join(self.root, 'songbook/data', 'admin.json')		# songbook admin file
+		self.appFolder = getAppFolder()
+		fileName = os.path.join(self.root, self.appFolder, 'data', 'admin.json')		# songbook admin file
 		with open(fileName,'r',encoding='utf8') as u:
 			self.reposDict = json.load(u)
-		fileName = os.path.join(self.root, 'songbook/data', 'chordDB.json')		# created by Music.py
+		fileName = os.path.join(self.root, self.appFolder, 'data', 'chordDB.json')		# created by Music.py
 		with open(fileName,'r',encoding='utf8') as u:
 			self.chordDB = json.load(u)
-		fileName = os.path.join(self.root, 'songbook/data', 'codeDB.json')		# created by Music.py
+		fileName = os.path.join(self.root, self.appFolder, 'data', 'codeDB.json')		# created by Music.py
 		with open(fileName,'r',encoding='utf8') as u:
 			self.codeDB = json.load(u)
-		fileName = os.path.join(self.root, 'songbook/data', 'musicConstants.json')		# created by Music.py
+		fileName = os.path.join(self.root, self.appFolder, 'data', 'musicConstants.json')		# created by Music.py
 		with open(fileName,'r',encoding='utf8') as u:
 			self.musicConstants = json.load(u)
-		fileName = os.path.join(self.root, 'songbook/data', 'constants.json')		# constants across all repositories
+		fileName = os.path.join(self.root, self.appFolder, 'data', 'constants.json')		# constants across all repositories
 		with open(fileName,'r',encoding='utf8') as cfg:
 			self.constants = json.load(cfg)
 		self.rr = rr					#rr will be role then repository: Omarie, Uchris, etc.
@@ -101,7 +109,7 @@ class Songs(object):
 				# utils.writeLog(f"reviewOnly: wrote review record, now update song {s} dates")
 				self.songDict[s]["RL"] = RL
 				self.songDict[s]["RN"] = RN
-				fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'songBook')		# song file
+				fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
 				if utils.saveFile(fileName, self.songDict, True) == 'good':
 					rev = f'Record saved, due on {self.songDict[s]["RN"]}: {self.songLink(s)}'
 				else:
@@ -162,7 +170,7 @@ class Songs(object):
 				#deal with printing if apostrophes are in the title
 				# utils.writeLog(f"ready to save, NT is {self.songDict[s]['NT']}")
 				title = re.sub("'", "&apos;", self.songDict[s]["TT"])
-				fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'songBook')		# song file
+				fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
 				if utils.saveFile(fileName, self.songDict, True) != 'good':
 					rev = f'Error saving record: {self.songLink(s)}'
 					utils.writeLog(f'Error on save, rev = {rev}')
@@ -240,10 +248,10 @@ class Songs(object):
 	def loadData(self, deckString):
 		### reads input files from data folder for repository
 		### path will be ToMarRoot || songbook/data || self.rr[1:]
-		fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'songBook.json')		# song file
+		fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook.json')		# song file
 		with open(fileName,'r',encoding='utf8') as cards:
 			self.songDict = json.load(cards)
-		fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'config.json')		# song file
+		fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'config.json')		# song file
 		with open(fileName,'r',encoding='utf8') as cfg:
 			self.config = json.load(cfg)
 		if len(deckString) < len(self.config["decks"]):
@@ -387,7 +395,7 @@ class Songs(object):
 function showMedia(x)
 {
 '''
-		fileName = f'https://tomargames.xyz/songbook/js/{self.rr[1:]}/' 
+		fileName = f'https://tomargames.xyz/{self.appFolder}/js/{self.rr[1:]}/' 
 		rh += f'window.open("{fileName}" + x); ' 
 		rh += '''
 }
@@ -510,7 +518,7 @@ categoryTitles = {
 		return (rList)
 	def getSongHistory(self, s):
 		#this will send to a modal a list of dates on which input s was reviewed, newest to oldest
-		revFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewSongs.json')	
+		revFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewSongs.json')	
 		with open(revFile,'r',encoding='utf8') as cards:
 			songs = json.load(cards)
 		dates = songs[s]
@@ -845,7 +853,7 @@ categoryTitles = {
 		js = f'editSong("{s}")' if copy == '' else f'copySong("{copy}")' 
 		saveButton = f'<td>{self.makeButton("Save", js, "pnlButton", "saveButton", "disabled", "Save Card")}</td>'
 		cancelButton = f'<td>{self.makeButton("Cancel", "javascript:cancelEdit()", "pnlButton", "cancelButton", "", "Cancel Edit")}</td>'
-		js = f'showChart("YN{s}")' 		# the Y will get it the edited NT field to convert, Y for integrated metronome (N for modal)
+		js = f'showChart("YY{s}")' 		# the Y will get it the edited NT field to convert, Y for integrated metronome (N for modal)
 		chartButton = f'<td>{self.makeButton(self.constants["icons"]["chart"], js, "pnlButton", "chartButton", "", "Convert edited notes to chart in modal")}</td>'
 		js = f'showDetail("{s}")' 	
 		schedButton = f'<td>{self.makeButton(self.constants["icons"]["schedule"], js, "pnlButton", "chartButton", "", "Standard Scheduling Buttons")}</td>'
@@ -1042,7 +1050,7 @@ categoryTitles = {
 		actions += f'<td>{self.pdfButton(s)}</td>'
 		return f'<table><tr valign="top">{actions}</tr></table>'
 	def pdfButton(self, s):
-		pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{s}.pdf')
+		pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{s}.pdf')
 		if (os.path.exists(pdfFile)):
 			js = f"openLink('../data/{self.rr[1:]}/pdfs/{s}.pdf'); "
 			return f'<div class=hoverContainer><img src="../js/pdfIcon.png" alt="chart pdf" onclick="{js}"><span class="hoverText songInfo">Chart pdf</span></div>'
@@ -1149,14 +1157,14 @@ categoryTitles = {
 	def addReviewRecord(self, rec):
 		fName = revs = ''
 		try:
-			fName = os.path.join(self.root, 'songbook/data', self.rr[1:], "reviewTrigger")	
+			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], "reviewTrigger")	
 			if os.path.exists(f'{fName}.json' ):
 				with open(f'{fName}.json' ) as gjson:
 					revs = json.load(gjson)
 			else:
 				revs = []
 			revs.append(rec)
-			fName = os.path.join(self.root, 'songbook/data', self.rr[1:], fName)	
+			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], fName)	
 			rc = utils.saveFile(fName, revs, True)
 		except Exception as e:
 			utils.writeLog(f'ERROR in trigger file recReview: {e}' )
@@ -1188,22 +1196,22 @@ categoryTitles = {
 	def updateReviewHistory(self):
 		#read in reviewTrigger file 
 		message = 'No updates necessary'
-		trigFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewTrigger.json')
+		trigFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewTrigger.json')
 		if os.path.exists(trigFile):
 			with open(trigFile,'r',encoding='utf8') as u:
 				trigList = json.load(u)
 			if len(trigList) > 0:
 				#read in reviewSongs and reviewDates
-				songFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewSongs.json')
+				songFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewSongs.json')
 				with open(songFile,'r',encoding='utf8') as u:
 					revSongDict = json.load(u)
-				dateFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewDates.json')
+				dateFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewDates.json')
 				with open(dateFile,'r',encoding='utf8') as u:
 					revDateDict = json.load(u)
-				chartFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewCharts.json')
+				chartFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewCharts.json')
 				with open(chartFile,'r',encoding='utf8') as u:
 					revChartDict = json.load(u)
-				chordFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'chordUsage.json')
+				chordFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'chordUsage.json')
 				with open(chordFile,'r',encoding='utf8') as u:
 					chordUsageDict = json.load(u)
 				sizeInSong = len(revSongDict)
@@ -1275,7 +1283,7 @@ categoryTitles = {
 												pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
 											pdf.ln()
 									# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-								pdfFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'pdfs', f'{songId}.pdf')
+								pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{songId}.pdf')
 								pdf.output(pdfFile)
 							if CH[0] != 'good':
 								# collect messages
@@ -1363,7 +1371,6 @@ categoryTitles = {
 		CHrec["title"] = self.songDict[s]["TT"]
 		self.errors = []								# will hold accumulated errors
 		sets = []
-		curSet = {}
 		lines = NT.split('↩️')
 		if len(lines) < 3 or len(lines[0]) == 0:
 			self.errors.append("No chart input data")	
@@ -1372,13 +1379,15 @@ categoryTitles = {
 		elif lines[0][7] == 'X':
 			self.errors.append("Chart not set up yet")	
 		else:
-			curLine = 1
 			needLyric = False
 			metaRecord = self.chartMetaLine(lines[0], self.getNewMetaRec(), 0)
-			inKey = metaRecord['KEYIN'] = self.setKey(self.notationCleanUp(metaRecord['KEYIN']))
 			curSet = self.newSet(metaRecord)
+			inKey = metaRecord['KEYIN'] = self.setKey(self.notationCleanUp(metaRecord['KEYIN']))
 			chord = ''							# this will collect characters until you have a chord
+			curLine = 0
+			# utils.writeLog(f"begin loop for song {s}, curSet is {curSet}")
 			while curLine < len(lines):
+				# utils.writeLog(f"in loop for song {s}, curLine is {curLine}")
 				startPos = 0
 				if len(lines[curLine]) == 0:
 					curLine += 99
@@ -1387,11 +1396,13 @@ categoryTitles = {
 					if lines[curLine][1] == ']':			# blank line
 						curSet["lines"].append([{"M": 'X', "T": 'X'}])
 						needLyric = False
-					else:
+					elif curLine > 0:
 						curSet["meta"]["end"] = curLine - 1
+						# utils.writeLog(f"Appending set for song {s}, curSet is {curSet['meta']}")
 						sets.append(curSet)
 						metaRecord = self.chartMetaLine(lines[curLine], curSet["meta"], curLine)
 						curSet = self.newSet(metaRecord)
+						# utils.writeLog(f"in loop for song {s}, curSet is {curSet['meta']}")
 						inKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYIN"]))
 					curLine += 1			# always go to the next line after a metaLine
 					continue
@@ -1421,7 +1432,9 @@ categoryTitles = {
 					chord = ''
 					needLyric = self.addLyric(curSet, lines, curLine, startPos, 999)
 					curLine += len(metaRecord["PATTERN"])
-		sets.append(curSet)
+			utils.writeLog(f"out of lines for song {s}, curLine is {curLine}")
+			curSet["meta"]["end"] = curLine - 1
+			sets.append(curSet)
 		CHrec["sets"] = sets
 		CHrec["errors"] = self.errors				# add errors to status list
 		return CHrec

@@ -220,6 +220,7 @@ function fixSpecialCharacters(str)
 	str = str.replaceAll('#', 'Q');
 	str = str.replaceAll('+', 'aug');
 	str = str.replaceAll('°', 'dim');
+	str = str.replaceAll('↩️', 'crlf');
 	return str;
 }
 function createDiv(id, className) {
@@ -356,6 +357,20 @@ function createColumnDiv() {
 	// console.log("createColumnDiv, currentColumnIndex is " + CH["currentColumnIndex"])
 	return columnDiv;
 }
+function createMetronomeDiv(id, divisor) {
+	let metronomeTable = document.createElement("table");
+	let row = metronomeTable.insertRow(0);
+	canvas = document.createElement("canvas");
+	canvas.setAttribute("id", `${id}canvas`);
+	canvasContext = canvas.getContext("2d")
+	canvas.width = window.innerWidth/divisor - 16;
+	canvas.height = 60;
+	canvasContext.strokeStyle = "#ffffff";
+	canvasContext.lineWidth = 2;
+	canvas.style.backgroundColor = "#aaa";
+	addTDtoTR(canvas, row);
+	return metronomeTable;
+}
 function createPanelDiv(id) {
 	// panel1 and panel2
 	// canvas will be panel1canvas
@@ -363,17 +378,7 @@ function createPanelDiv(id) {
 	let panelDiv = createDiv(id);
 	panelDiv.style.border = "1px solid #000"
 	// panel will consist of metronomeTable and setTable
-	let metronomeTable = document.createElement("table");
-	let row = metronomeTable.insertRow(0);
-	canvas = document.createElement("canvas");
-	canvas.setAttribute("id", `${id}canvas`);
-	canvasContext = canvas.getContext("2d")
-	canvas.width = window.innerWidth/2 - 16;
-	canvas.height = 60;
-	canvasContext.strokeStyle = "#ffffff";
-	canvasContext.lineWidth = 2;
-	canvas.style.backgroundColor = "#aaa";
-	addTDtoTR(canvas, row);
+	let metronomeTable = createMetronomeDiv(id, 2);
 	panelDiv.appendChild(metronomeTable);
 	let setTable = newBorderedTable();
 	setTable.setAttribute("id", `${id}setTable`);
@@ -387,16 +392,16 @@ function newBorderedTable() {
 	return tbl
 }
 function showChart(argument) {
-	// argument is YYs -- Y for NT input, Y for modal, then s
-	// alert('in showChart, argument is ' + argument);	
+	// argument is YYs -- Y if fresh for NT input, second Y for integrated display modal, then s
 	let inp = '';
 	let s = argument.substring(2, 5);
 	let fresh = argument.substring(0, 1);
 	let integratedDisplay = argument.substring(1, 2);
 	let xhttp = new XMLHttpRequest();
+	console.log(`in showChart, fresh is ${fresh}, integrated is ${integratedDisplay}, inp is ${inp}`);
 	// if you're not in a modal, save search results for redisplay
 	if (integratedDisplay == "Y") {
-		sessionStorage.setItem('searchResults', $('searchResults').innerHTML);
+		sessionStorage.setItem('searchResults', $('searchResults').innerHTML);			// saving the screen to put back up when done, don't need if using modal
 	}  
 	if (fresh == "Y") {
 		// prepare input from NT field
@@ -405,7 +410,6 @@ function showChart(argument) {
 		if (inp.length > 5000) {
 			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
 		}
-		console.log(inp);
 		// at current default setting, only 8192 bytes can be posted, including all other variables
 		// if we increase it by adding "LimitRequestLine 16384" as done in httpdRequestFix.conf in server configuration
 		// so far this only applies to one song (070, tale of bear and otter), so substituting stored record
@@ -421,7 +425,7 @@ function showChart(argument) {
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			CH = JSON.parse(this.responseText);
-			if (integratedDisplay == "Y") {
+			if (integratedDisplay == "N") {
 				showChartInModal(CH);
 			} else {
 				showChartIntegrated(CH);
@@ -475,7 +479,6 @@ function showChartIntegrated(CHrec) {
 function showChartInModal(CHrec)
 {
 	// alert('in showChartInModal, argument is ' + s);
-	let xhttp = new XMLHttpRequest();
 	let modal = $('myModal');
 	CHrec["currentColumnIndex"] = CHrec["currentLineIndex"] = -1;
 	let maxColumns, maxLines;
@@ -486,16 +489,22 @@ function showChartInModal(CHrec)
 		maxColumns = parseInt(window.innerWidth/350);
 		maxLines = parseInt(window.innerHeight/40);
 	}
-	console.log(`songId is ${songId}, screen width = ${window.innerWidth}, screen height = ${window.innerHeight}, maxColumns = ${maxColumns}, maxLines = ${maxLines}`);
+	console.log(`showChartInModal: screen width = ${window.innerWidth}, screen height = ${window.innerHeight}, maxColumns = ${maxColumns}, maxLines = ${maxLines}`);
 	let nDisplay = $('nDisplay');
 	nDisplay.innerHTML = '';
 	let modalDiv = createDiv("chartModal", "chartModal");
 	nDisplay.appendChild(modalDiv);
+	let nClose = $('nClose');
+	nClose.innerHTML = '';
+	let bottomTable = newBorderedTable();
+	nClose.appendChild(bottomTable);
+	row = bottomTable.insertRow();
+	addTDtoTR("close", row, "close");
+	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
 	let setTable = addChartColumn(modalDiv);
 	// process sets sequentially, adding to the current column
 	// if maxLines, start a new column by adding one to currentColumn and call createColumnDiv
 	CHrec["sets"].forEach((set, setIndex) => {
-//		console.log("top of loop for set " + setIndex + ", lineIndex is " + CH["currentLineIndex"]);
 		CHrec["currentSet"] = setIndex;
 		if (CHrec["currentLineIndex"] + set["meta"]["pattern"].length + 1 > maxLines) {
 			setTable = addChartColumn(modalDiv);
@@ -519,23 +528,17 @@ function showChartInModal(CHrec)
 			closeChart(modal);
 		}
 	}
-	// 		if (response.slice(0, 3) == "EOF") {
-	// 			response = this.responseText.substring(3);
-	// 			$("nClose").innerHTML = "close";
-	// 		} else {
-	// 			$("nClose").innerHTML = "next";
-	// 		}
-	// $("nClose").onclick = function() {
-	// 	if ($("nClose").innerHTML == "next") {
-	// 		page += 1;
-	// 		showNote(argument.substring(0,1) + s + page);
-	// 	} else {
-	// 		closeChart(modal);
-	// 		if (argument.substring(0,1) == "N") {
-	// 			showDetail(s);
-	// 		}
-	// 	}
-	// }
+	$("nClose").onclick = function() {
+		// if ($("nClose").innerHTML == "next") {
+		// 	page += 1;
+		// 	showNote(argument.substring(0,1) + s + page);
+		// } else {
+		closeChart(modal);
+		// if (argument.substring(0,1) == "N") {
+		// 	showDetail(s);
+		// }
+		// }
+	}
 }	
 function addChartColumn(modalDiv) {
 	CH["currentColumnIndex"] += 1;
@@ -1044,7 +1047,7 @@ function showDetail(songId) {
 	modal.style.display = "block";
 }
 function cancelEdit() {
-	alert("this needs to be brought into line with new chart process");
+	// alert("this needs to be brought into line with new chart process");
 	if ($("saveButton") != null) {
 		if ($("saveButton").disabled == false) {			// true if there have been edits
 			if (confirm("You have unsaved changes that will be lost if you proceed.") == false) {
