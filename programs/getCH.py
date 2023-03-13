@@ -40,7 +40,7 @@ else:
 			CH = songCharts[s]
 			# utils.writeLog(f"CH is {CH}")
 		else:
-			utils.writeLog(f"input, will call createChartRecord for {s}")
+			# utils.writeLog(f"input, will call createChartRecord for {s}")
 			inp = inp.replace("crlf", "↩️")
 			CH = sb.createChartRecord(inp, s)
 		outrec = []
@@ -48,12 +48,14 @@ else:
 		for set in CH["sets"]:
 			counter[1] = 0
 			outrec.append({"meta": {}, "lines": []})
-			outrec[-1]["meta"]["key"] = set["meta"]["KEYOUT"]
-			outrec[-1]["meta"]["pattern"] = set["meta"]["PATTERN"]
-			outrec[-1]["meta"]["type"] = sb.constants["chartSetTypes"][set["meta"]["TYPE"]]
+			outrec[-1]["meta"]["key"] = set["meta"]["KEYO"]
+			outrec[-1]["meta"]["pattern"] = set["meta"]["PTN"]
+			outrec[-1]["meta"]["type"] = sb.constants["chartSetTypes"][set["meta"]["TYP"]]
 			outrec[-1]["meta"]["bpm"] = set["meta"]["BPM"]
 			outrec[-1]["meta"]["noteRes"] = set["meta"]["RES"]
-			outrec[-1]["meta"]["meter"] = set["meta"]["METER"]
+			outrec[-1]["meta"]["meter"] = set["meta"]["MTR"]
+			outrec[-1]["meta"]["columns"] = set["meta"]["COL"]
+			outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
 			for line in set["lines"]:
 				if line[0]['M'] != 'X':
 					# utils.writeLog(f"in loop for set: {counter[0]}, line {counter[1]}")
@@ -65,10 +67,10 @@ else:
 							if inv > -1:						# this is an inversion, split it into cPart and bPart
 								cPart = elem['M'][0:inv]	
 								bPart = elem['M'][inv + 1:]
-								chordInfo = sb.breakDownChord(cPart, set["meta"]["KEYOUT"])
+								chordInfo = sb.breakDownChord(cPart, set["meta"]["KEYO"])
 								chordInfo["suffix"] += f'/{chordInfo["notes"][int(bPart)]}'
 							else:
-								chordInfo = sb.breakDownChord(elem['M'], set["meta"]["KEYOUT"]) 
+								chordInfo = sb.breakDownChord(elem['M'], set["meta"]["KEYO"]) 
 							chordInfo["hover"] = f"{chordInfo['symbol']}: {chordInfo['notes']}" 
 							outrec[-1]["lines"][-1][-1]["M"] = chordInfo
 				else:

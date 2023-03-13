@@ -6,7 +6,7 @@ function loadJs(x)
 	sessionStorage.setItem('lastSortedCol', -1);
 	var rr = getFromLocal('songBookRR');
 	var dd = getFromLocal('songBookDD');
-	var CH = {};
+	var CHrec;
 
 	// detect if you're on a phone, otherwise set for PC
 	// pixel 3a: 507 in portrait
@@ -281,15 +281,15 @@ function addTDtoTR(item, row, className) {
 	}
 	row.appendChild(col);
 }
-function playMetronome() {
-	tempoButton.style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "azure" ;
-	play();
-}
+// function playMetronome() {
+// 	tempoButton.style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "azure" ;
+// 	play();
+// }
 function getNextSet(e) {
 	e.preventDefault()
 	// console.log(e);
-	CH["currentSet"] = displaySetInPanels();
-	if (CH["currentSet"] == CH.sets.length) {
+	CHrec["currentSetIndex"] = displaySetInPanels();
+	if (CHrec["currentSetIndex"] == CHrec.sets.length) {
 		// $("moreButton").innerHTML = "";				// remove button if no more sets to show
 		$("moreButton").disabled = true;
 	}
@@ -300,25 +300,27 @@ function displayMetaLine(set, setTable) {
 	let metaTable = document.createElement("table");
 	metaTable.style.width = "100%";
 	let metaRow = metaTable.insertRow();
-	addTDtoTR(CH["currentSet"], metaRow, "chartMeta");
+	addTDtoTR(CHrec["currentSetIndex"], metaRow, "chartMeta");
 	addTDtoTR(`Type: ${set["meta"]["type"]}`, metaRow, "chartMeta");
 	addTDtoTR(`Key: ${set["meta"]["key"]}`, metaRow, "chartMeta");
 	addTDtoTR(`BPM: ${set["meta"]["bpm"]}`, metaRow, "chartMeta");
 	addTDtoTR(`Meter: ${set["meta"]["meter"]}`, metaRow, "chartMeta");
 	addTDtoTR(`Pattern: ${set["meta"]["pattern"]}`, metaRow, "chartMeta");
 	addTDtoTR(metaTable, row);
+	CHrec["linesInColumn"] += 1;
 }
 function displayChartLine(set, line, lineIndex, setTable) {
 	let setLineRow = setTable.insertRow();			// one row for each line in set, holds lineTable
 	if (line.length == 1 && line[0]["M"] == 'X') {
 		addTDtoTR(document.createElement("hr"), setLineRow);		// no cells, just a <hr>			
+		CHrec["linesInColumn"] += 1;
 	} else {
 		let lineTable = document.createElement("table");  // table of subordinate rows (1, 2, 3, M, and T) for EACH LINE of the set
 		let col = document.createElement("td");
 		col.style.backgroundColor = (lineIndex % 2 == 0) ? "#EEE" : "#DDD";
 		col.appendChild(lineTable);
 		setLineRow.appendChild(col);
-		let lineRow = lineTable.insertRow();			// holds table with contents of line, one row for each data type in pattern
+		// let lineRow = lineTable.insertRow();			// holds table with contents of line, one row for each data type in pattern
 		// for each character in pattern, insert a corresponding row in lineTable and fill it
 		['1', '2', '3', 'M', "T"].forEach((code) => {
 			if (set["meta"]["pattern"].includes(code)) {
@@ -334,28 +336,18 @@ function displayChartLine(set, line, lineIndex, setTable) {
 			// 	console.log(code + " not in this line");
 			// }
 		})
+		CHrec["linesInColumn"] += CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length
 	}	
 }
 function displaySetInPanels() {
-	let setTable = (CH["currentSet"] % 2 == 0) ? $("panel0setTable") : $("panel1setTable"); 	// get set table
+	let setTable = (CHrec["currentSetIndex"] % 2 == 0) ? $("panel0setTable") : $("panel1setTable"); 	// get set table
 	setTable.innerHTML = "";
-	let set = CH["sets"][CH["currentSet"]];
-	// display set metaData
-	displayMetaLine(set, setTable);
-	// display lines in set 
-	set["lines"].forEach((line, lineIndex) => {
+	let set = CHrec["sets"][CHrec["currentSetIndex"]];
+	displayMetaLine(set, setTable);							// display set metaData
+	set["lines"].forEach((line, lineIndex) => {				// display lines in set 
 		displayChartLine(set, line, lineIndex, setTable);
 	})
-	return CH["currentSet"] + 1;
-}
-function createColumnDiv() {
-	let columnDiv = createDiv(`column${CH["currentColumnIndex"]}`);
-	columnDiv.style.border = "thin solid #000";
-	let setTable = newBorderedTable();
-	setTable.setAttribute("id", `column${CH["currentColumnIndex"]}setTable`);
-	columnDiv.appendChild(setTable);
-	// console.log("createColumnDiv, currentColumnIndex is " + CH["currentColumnIndex"])
-	return columnDiv;
+	return CHrec["currentSetIndex"] + 1;
 }
 function createMetronomeDiv(id, divisor) {
 	let metronomeTable = document.createElement("table");
@@ -363,7 +355,7 @@ function createMetronomeDiv(id, divisor) {
 	canvas = document.createElement("canvas");
 	canvas.setAttribute("id", `${id}canvas`);
 	canvasContext = canvas.getContext("2d")
-	canvas.width = window.innerWidth/divisor - 16;
+	canvas.width = (divisor > 1) ? window.innerWidth/divisor - 16 : 700;
 	canvas.height = 60;
 	canvasContext.strokeStyle = "#ffffff";
 	canvasContext.lineWidth = 2;
@@ -398,10 +390,10 @@ function showChart(argument) {
 	let fresh = argument.substring(0, 1);
 	let integratedDisplay = argument.substring(1, 2);
 	let xhttp = new XMLHttpRequest();
-	console.log(`in showChart, fresh is ${fresh}, integrated is ${integratedDisplay}, inp is ${inp}`);
+	// console.log(`in showChart, fresh is ${fresh}, integrated is ${integratedDisplay}, inp is ${inp}`);
 	// if you're not in a modal, save search results for redisplay
 	if (integratedDisplay == "Y") {
-		sessionStorage.setItem('searchResults', $('searchResults').innerHTML);			// saving the screen to put back up when done, don't need if using modal
+		sessionStorage.setItem('editScreen', $('searchResults').innerHTML);			// saving the edit screen to put back up when done, don't need if using modal
 	}  
 	if (fresh == "Y") {
 		// prepare input from NT field
@@ -410,25 +402,14 @@ function showChart(argument) {
 		if (inp.length > 5000) {
 			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
 		}
-		// at current default setting, only 8192 bytes can be posted, including all other variables
-		// if we increase it by adding "LimitRequestLine 16384" as done in httpdRequestFix.conf in server configuration
-		// so far this only applies to one song (070, tale of bear and otter), so substituting stored record
-		// if (inp.length > 8000) {
-		// 	if (page == 0) {
-		// 		alert("Chart input is too long, reading from stored record");
-		// 	}
-		// 	inp = '';
-		// } else {
-		// 	inp = fixSpecialCharacters(inp);
-		// }
 	}
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
-			CH = JSON.parse(this.responseText);
+			CHrec = JSON.parse(this.responseText);
 			if (integratedDisplay == "N") {
-				showChartInModal(CH);
+				showChartInModal();
 			} else {
-				showChartIntegrated(CH);
+				showChartIntegrated();
 			}
 		}
 	};
@@ -438,7 +419,7 @@ function showChart(argument) {
 	xhttp.open("POST", "getCH.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
 	xhttp.send();
 }
-function showChartIntegrated(CHrec) {
+function showChartIntegrated() {
 	// if the metronome div does not exist, run init to create it
 	// if (audioContext == null) {
 	// 	init();
@@ -456,7 +437,7 @@ function showChartIntegrated(CHrec) {
 	row.appendChild(col);
 	let buttonPanel = createDiv("buttonPanel", "reviewTitle");
 	buttonPanel.appendChild(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"));
-	buttonPanel.appendChild(createButton("backButton", "chartButton", cancelEdit, "❎", "back to list"));
+	buttonPanel.appendChild(createButton("backButton", "chartButton", backButton, "❎", "back to list"));
 	addTDtoTR(buttonPanel, row);
 	// add new table to searchResults to hold panel1 and panel2
 	let searchResultsTable = newBorderedTable();
@@ -467,153 +448,86 @@ function showChartIntegrated(CHrec) {
 		addTDtoTR(createPanelDiv("panel" + i), row);
 	}
 	// now populate the panels
-	CHrec["currentSet"] = 0;
+	CHrec["currentSetIndex"] = 0;
 	// fill up both panels with set lines, after that it will be controlled by metronome or page button
-	CHrec["currentSet"] = displaySetInPanels(); // populate panel1 with first set
-	CHrec["currentSet"] = displaySetInPanels(); // populate panel2 with second set
-	if (CHrec["currentSet"] < CHrec["sets"].length) {
+	CHrec["currentSetIndex"] = displaySetInPanels(); // populate panel1 with first set
+	CHrec["currentSetIndex"] = displaySetInPanels(); // populate panel2 with second set
+	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 		buttonPanel.appendChild(createButton("moreButton", "chartButton", getNextSet, "➕", "display next set"));
 	}
 	$("songTitle").innerHTML = CHrec["title"];
 }
-function showChartInModal(CHrec)
+function displayChartPage() {				// called when you press + for next chart page
+	$("cDisplay").innerHTML = '';
+	tbl = newBorderedTable();
+	let row = tbl.insertRow();
+	row.setAttribute("valign", "top");
+	CHrec["currentColumnIndex"] = 0;
+	while (CHrec["currentColumnIndex"] < CHrec["maxColumns"]) {
+		// let columnDiv = createDiv(`column${CHrec["currentColumnIndex"]}`);
+		// columnDiv.style.border = "thin solid #000";
+		let setTable = newBorderedTable();												// this holds chart lines
+		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
+		addTDtoTR(setTable, row);
+		while (CHrec["linesInColumn"] < CHrec["maxLines"] && CHrec["currentSetIndex"] < CHrec["sets"].length) {
+			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
+				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// still room for meta line and at least first lines
+					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
+				}
+			}
+			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// room for next line
+				displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable);
+				CHrec["currentLineIndex"] += 1;
+				if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
+					CHrec["currentSetIndex"] += 1;
+					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+						CHrec["currentLineIndex"] = 0;
+					} else {
+						CHrec["linesInColumn"] = CHrec["maxLines"];
+					}
+				}
+			} else {				// need to make a new column
+				CHrec["linesInColumn"] = CHrec["maxLines"];
+			}
+		}
+		CHrec["currentColumnIndex"] += 1;
+		CHrec["linesInColumn"] = 0;
+	}
+	$("cDisplay").appendChild(tbl);
+	if (CHrec["currentSetIndex"] >= CHrec["sets"].length) {
+		$("moreButton").disabled = true;
+	}
+}
+function showChartInModal()
 {
 	// alert('in showChartInModal, argument is ' + s);
-	let modal = $('myModal');
-	CHrec["currentColumnIndex"] = CHrec["currentLineIndex"] = -1;
-	let maxColumns, maxLines;
-	if (window.innerWidth < 800) {
-		maxColumns = 1;
-		maxLines = 999;
-	} else {
-		maxColumns = parseInt(window.innerWidth/350);
-		maxLines = parseInt(window.innerHeight/40);
-	}
-	console.log(`showChartInModal: screen width = ${window.innerWidth}, screen height = ${window.innerHeight}, maxColumns = ${maxColumns}, maxLines = ${maxLines}`);
-	let nDisplay = $('nDisplay');
-	nDisplay.innerHTML = '';
-	let modalDiv = createDiv("chartModal", "chartModal");
-	nDisplay.appendChild(modalDiv);
-	let nClose = $('nClose');
-	nClose.innerHTML = '';
+	let modal = $('chartModal');
+	CHrec["maxColumns"] = CHrec["sets"][0]["meta"]["columns"];
+	CHrec["maxLines"] = CHrec["sets"][0]["meta"]["lines"];
+	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = 0;
+	let cPanel = $('cPanel');
+	cPanel.innerHTML = '';
 	let bottomTable = newBorderedTable();
-	nClose.appendChild(bottomTable);
+	cPanel.appendChild(bottomTable);
 	row = bottomTable.insertRow();
-	addTDtoTR("close", row, "close");
 	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
-	let setTable = addChartColumn(modalDiv);
-	// process sets sequentially, adding to the current column
-	// if maxLines, start a new column by adding one to currentColumn and call createColumnDiv
-	CHrec["sets"].forEach((set, setIndex) => {
-		CHrec["currentSet"] = setIndex;
-		if (CHrec["currentLineIndex"] + set["meta"]["pattern"].length + 1 > maxLines) {
-			setTable = addChartColumn(modalDiv);
-		}
-		displayMetaLine(set, setTable);
-		CHrec["currentLineIndex"] += 1;
-		// console.log("after metaLine for set " + setIndex + ", lineIndex is " + CH["currentLineIndex"]);
-		set["lines"].forEach((line, lineIndex) => {
-			// console.log(`line.forEach, lineIndex is ${lineIndex}, added lines will be ${set["meta"]["pattern"].length}`);
-			if (CHrec["currentLineIndex"] + set["meta"]["pattern"].length > maxLines) {
-				setTable = addChartColumn(modalDiv);
-			}
-			displayChartLine(set, line, lineIndex, setTable);
-			CHrec["currentLineIndex"] += set["meta"]["pattern"].length;
-		})
-		// console.log("bottom of loop for set " + setIndex + ", lineIndex is " + CH["currentLineIndex"]);
-	})
+	addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	addTDtoTR(createButton("backButton", "chartButton", backButton, "❎", "close"), row);
+	addTDtoTR(createButton("moreButton", "chartButton", displayChartPage, "➕", "display next page"), row);
+	$("moreButton").disabled = true;
+	displayChartPage();
+	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		$("moreButton").disabled = false;
+	}
 	modal.style.display = "block";
 	window.onclick = function(event) {				// if you click outside the modal, it will always close
 		if (event.target == modal) {
-			closeChart(modal);
+			modal.style.display = "none";		
 		}
 	}
 	$("nClose").onclick = function() {
-		// if ($("nClose").innerHTML == "next") {
-		// 	page += 1;
-		// 	showNote(argument.substring(0,1) + s + page);
-		// } else {
-		closeChart(modal);
-		// if (argument.substring(0,1) == "N") {
-		// 	showDetail(s);
-		// }
-		// }
-	}
+		modal.style.display = "none";	}
 }	
-function addChartColumn(modalDiv) {
-	CH["currentColumnIndex"] += 1;
-	modalDiv.appendChild(createColumnDiv());			// add a new column
-	CH["currentLineIndex"] = 0;
-	// console.log("addChartColumn, currentColumnIndex is " + CH["currentColumnIndex"])
-	// return a pointer to the new column's setTable
-	return $(`column${CH["currentColumnIndex"]}setTable`);
-}
-// When the user clicks the button, open the modal
-function showNote(argument)
-{
-	// alert('in showNote, argument is ' + argument);
-	let inp = '';
-	let s = argument.substring(1, 4);
-	let page = argument.substring(4) * 1;
-	let xhttp = new XMLHttpRequest();
-	let modal = $('myModal');
-	if (argument.substring(0, 1) == 'Y')
-	{
-		// replace all newlines with |||
-		inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
-		inp = fixSpecialCharacters(inp);
-		if (inp.length > 5000) {
-			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
-		}
-		// at current default setting, only 8192 bytes can be posted, including all other variables
-		// if we increase it by adding "LimitRequestLine 16384" as done in httpdRequestFix.conf in server configuration
-		// so far this only applies to one song (070, tale of bear and otter), so substituting stored record
-		// if (inp.length > 8000) {
-		// 	if (page == 0) {
-		// 		alert("Chart input is too long, reading from stored record");
-		// 	}
-		// 	inp = '';
-		// } else {
-		// 	inp = fixSpecialCharacters(inp);
-		// }
-	}
-	// console.log(inp);
-	window.onclick = function(event) {				// if you click outside the modal, it will always close
-		if (event.target == modal) {
-			closeChart(modal);
-		}
-	}
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			let response = this.responseText;
-			// console.log("in showNote, reponse is " + response);
-			if (response.slice(0, 3) == "EOF") {
-				response = this.responseText.substring(3);
-				$("nClose").innerHTML = "close";
-			} else {
-				$("nClose").innerHTML = "next";
-			}
-			nDisplay.innerHTML = response;
-			modal.style.display = "block";
-		}
-	};
-	$("nClose").onclick = function() {
-		if ($("nClose").innerHTML == "next") {
-			page += 1;
-			showNote(argument.substring(0,1) + s + page);
-		} else {
-			closeChart(modal);
-			if (argument.substring(0,1) == "N") {
-				showDetail(s);
-			}
-		}
-	}
-	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
-	let r = document.gForm.rr.value;
-	xhttp.open("POST", "getNote.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp + '&w=' + window.innerWidth + '&h=' + window.innerHeight + "&page=" + page, true);
-	xhttp.send();
-}
 // Close the chart display modal
 function closeChart(modal) {
 	modal.style.display = "none";
@@ -732,13 +646,8 @@ function scheduleAndSave(dueDate, bNum, songId)
 {
 	$("RN").disabled = false;
 	$("RN").value = dueDate;
-	// schdSelect = document.getElementsByClassName("songDetail selected");
-	// schdSelect.className = "songDetail button";
-	// $("b" + bNum).className = "songDetail selected";
-	// $("oper").value = "S" + songId;
 	document.gForm.RN.value = dueDate;
 	document.gForm.oper.value = "S" + songId;
-	// console.log("scheduleAndSave, RL is " + document.gForm.RL.value + ", RN is " + document.gForm.RN.value);
 	document.gForm.submit();
 }
 function contractNotes()
@@ -978,6 +887,7 @@ function execSearch(s, upd = false)
 	if (s.substring(0,1) == "o") {					// this is going to the edit screen, save songList and songDetail
 		sessionStorage.setItem('searchResults', $("searchResults").innerHTML);
 	}
+	sessionStorage.removeItem('editScreen');
 	var xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() 
 	{
@@ -1047,13 +957,22 @@ function showDetail(songId) {
 	modal.style.display = "block";
 }
 function cancelEdit() {
-	// alert("this needs to be brought into line with new chart process");
 	if ($("saveButton") != null) {
-		if ($("saveButton").disabled == false) {			// true if there have been edits
+		if ($("saveButton").disabled == false) {			// true if you're on the edit screen and there have been edits
 			if (confirm("You have unsaved changes that will be lost if you proceed.") == false) {
 				return;
 			}
-		}		
+		}
 	}
 	$("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+}
+function backButton(e) {
+	if (sessionStorage.getItem('editScreen') != null) {
+		$("searchResults").innerHTML= sessionStorage.getItem('editScreen');
+		sessionStorage.removeItem('editScreen');
+	} else {
+		// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+		$('chartModal').style.display = "none";
+		e.preventDefault();
+	}
 }

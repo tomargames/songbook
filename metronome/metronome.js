@@ -86,10 +86,12 @@ function scheduler() {
     nextNote()
   }
 }
+function playMetronome(canvas) {
+    alert("in play, canvas is " + canvas);
+}
 
 function play() {
-    alert("called play");
-    if (!unlocked) {
+  if (!unlocked) {
     // play silent buffer to unlock the audio
     var buffer = audioContext.createBuffer(1, 1, 22050)
     var node = audioContext.createBufferSource()

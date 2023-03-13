@@ -73,6 +73,7 @@ class Songs(object):
 			if gid in self.reposDict[u]["U"]:			# user role
 				self.roleList.append(f'U{u}')
 		users = Users.Users()			# object containing userDict of users of ToMarGames
+		self.errors = []
 		self.appUsers = users.getAppUsers(users.SONGBOOK)
 		if self.rr in self.roleList:	#if self.rr is in that list, keep it and move on
 			self.loadData(deckString)
@@ -187,7 +188,7 @@ class Songs(object):
 		#  utils.writeLog(f'processInput for song {s} rev {rev}')
 		return rev
 	def addLyric(self, curSet, lines, curLine, start, end):
-		if 'T' in curSet["meta"]["PATTERN"]:
+		if 'T' in curSet["meta"]["PTN"]:
 			curSet["lines"][-1][-1]["T"] = lines[curLine + 1][start: end].rstrip()
 		return False
 	def notationCleanUp(self, chord):
@@ -242,7 +243,7 @@ class Songs(object):
 		if chord > '':
 			curSet["lines"][-1].append({})
 			curSet["lines"][-1][-1]["M"] = self.getCodeFromChordDB(chord, key)
-			if "T" in curSet["meta"]["PATTERN"]:
+			if "T" in curSet["meta"]["PTN"]:
 				return True
 		return False
 	def loadData(self, deckString):
@@ -377,12 +378,19 @@ class Songs(object):
 		rh += '</td></tr></table>'
 		rh += '''
 <div id="myModal" class="modal">
-  <!-- Modal content for history and chart display -->
+  <!-- Modal content for report display -->
   <div class="modal-content">
     <div id="nDisplay">filler</div>
     <div id="nClose" class="close">close</div>
   </div>
 </div>
+<div id="chartModal" class="modal">
+  <!-- Modal content for chart display -->
+  <div class="modal-content">
+	<div id="cDisplay" class="chartModal">filler</div>
+    <div id="cPanel" class="chartButton">filler</div>
+  </div>
+</div>  
 <div id="smallModal" class="smallmodal">
   <!-- Modal content for songDetail-->
   <div class="modal-content">
@@ -643,7 +651,7 @@ categoryTitles = {
 		rec['DK'] = '0'			#setting deck to empty, so it'll automatically create changeRec
 		rec['CD'] = rec['RL'] = rec['RN'] = str(self.today)
 		rec['RA'] = rec['RT'] = 0
-		rec['NT'] = '[KEYIN X, KEYOUT X, TYPE V, PATTERN T, BPM 000, RES 2, MEASURE A]'
+		rec['NT'] = self.getNewMetaRec()
 		return rec
 	def getSongs(self, q):
 		'''
@@ -854,9 +862,11 @@ categoryTitles = {
 		saveButton = f'<td>{self.makeButton("Save", js, "pnlButton", "saveButton", "disabled", "Save Card")}</td>'
 		cancelButton = f'<td>{self.makeButton("Cancel", "javascript:cancelEdit()", "pnlButton", "cancelButton", "", "Cancel Edit")}</td>'
 		js = f'showChart("YY{s}")' 		# the Y will get it the edited NT field to convert, Y for integrated metronome (N for modal)
+		chartEdit = f'<td>{self.makeButton(self.constants["icons"]["edit"], js, "pnlButton", "chartEdit", "", "Convert edited notes into integrated display")}</td>'
+		js = f'showChart("YN{s}")' 		# the Y will get it the edited NT field to convert, Y for integrated metronome (N for modal)
 		chartButton = f'<td>{self.makeButton(self.constants["icons"]["chart"], js, "pnlButton", "chartButton", "", "Convert edited notes to chart in modal")}</td>'
 		js = f'showDetail("{s}")' 	
-		schedButton = f'<td>{self.makeButton(self.constants["icons"]["schedule"], js, "pnlButton", "chartButton", "", "Standard Scheduling Buttons")}</td>'
+		schedButton = f'<td>{self.makeButton(self.constants["icons"]["schedule"], js, "pnlButton", "schedButton", "", "Standard Scheduling Buttons")}</td>'
 		js = 'openLink("../programs/chordPalette.py"); '
 		paletteButton = f'<td>{self.makeButton(self.constants["icons"]["palette"], js, "pnlButton", "chordsButton", "", "Palette of available chords in keys" )}</td>'
 		js = f'showHistory("{s}")' 
@@ -872,9 +882,9 @@ categoryTitles = {
 		for l in self.songDict[s]["LL"]:
 			userButtons += f'<td>{self.llButton(s, l, "Y")}</td>'
 		# buttons = f"<table><tr class=reviewTitle>{saveButton}{schedButton}{metronomeButton}{chartButton}{pdfButton}{paletteButton}{userButtons}{historyButton}{copyButton}{importButton}{cancelButton}</tr></table>" 
-		buttons = f"<table><tr class=reviewTitle>{saveButton}{schedButton}{chartButton}{pdfButton}{paletteButton}{userButtons}{historyButton}{copyButton}{importButton}{cancelButton}</tr></table>" 
+		buttons = f"<table><tr class=reviewTitle>{saveButton}{schedButton}{chartEdit}{chartButton}{pdfButton}{paletteButton}{userButtons}{historyButton}{copyButton}{importButton}{cancelButton}</tr></table>" 
 		noteDisplay = re.sub("↩️", '\\n', self.songDict[s]["NT"])
-		noteDisplay = f'<div class="reviewTitle"><hr>{self.songDict[s]["TT"]}</div><textarea class="NTinput" oninput=enableSave() rows="32" cols="70" name="NT" id="NT">{noteDisplay}</textarea>'
+		noteDisplay = f'<div class="reviewTitle"><hr>{self.songDict[s]["TT"]}</div><textarea class="NTinput" oninput=enableSave() rows="32" cols="80" name="NT" id="NT">{noteDisplay}</textarea>'
 		editFields = f'{buttons}<table><tr><td class=listText>{self.constants["fields"]["TT"]["title"]}:</td><td class=listText>{self.editField("TT", s, "", "")}</td>'
 		dk = '<select id="DK" name="DK" oninput="enableSave()">'
 		for d in sorted(self.config["decks"]):
@@ -1232,7 +1242,7 @@ categoryTitles = {
 					if "NT" in changeRec and changeRec["NT"] == True:
 						# processNTtoCH returns (rc, record)
 						try:
-							CH = self.processNTtoCH(self.songDict[songId]['NT'], songId)
+							CH = self.createChartRecord(self.songDict[songId]['NT'], songId)
 							if CH[0] == 'good' or CH[0] == 'err1':
 								# now optimize before saving to reviewCharts file
 								# newRec = self.revChartProcess(CH[1])
@@ -1278,7 +1288,7 @@ categoryTitles = {
 												textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
 											pdf.set_font("courier", size = 14, style = "B")
 											pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
-											if "T" in CH[1][s]["meta"]["PATTERN"]:
+											if "T" in CH[1][s]["meta"]["PTN"]:
 												pdf.set_font("courier", size = 14, style = "")
 												pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
 											pdf.ln()
@@ -1343,7 +1353,7 @@ categoryTitles = {
 					message = f'Not saving file, date file size went from {sizeInDate} to {len(revDateDict)}' 
 				else:
 					os.rename(f"{trigFile}", f"{trigFile}.{utils.timeStamp()}")
-					fileName = os.path.join(self.root, 'songbook/data', self.rr[1:], 'songBook')		# song file
+					fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
 					rcb = utils.saveFile(fileName, self.songDict, force=True)			#save songBook file and force backup
 					rcs = utils.saveFile(songFile[:-5], revSongDict, True)		#save songHistory
 					rcd = utils.saveFile(dateFile[:-5], revDateDict, True)		#save dateHistory
@@ -1376,13 +1386,13 @@ categoryTitles = {
 			self.errors.append("No chart input data")	
 		elif lines[0][0] != '[':
 			self.errors.append("First line not metaline")	
-		elif lines[0][7] == 'X':
+		elif lines[0][6] == 'X':						# KEYI of X is default
 			self.errors.append("Chart not set up yet")	
 		else:
 			needLyric = False
 			metaRecord = self.chartMetaLine(lines[0], self.getNewMetaRec(), 0)
 			curSet = self.newSet(metaRecord)
-			inKey = metaRecord['KEYIN'] = self.setKey(self.notationCleanUp(metaRecord['KEYIN']))
+			inKey = metaRecord['KEYI'] = self.setKey(self.notationCleanUp(metaRecord['KEYI']))
 			chord = ''							# this will collect characters until you have a chord
 			curLine = 0
 			# utils.writeLog(f"begin loop for song {s}, curSet is {curSet}")
@@ -1403,7 +1413,7 @@ categoryTitles = {
 						metaRecord = self.chartMetaLine(lines[curLine], curSet["meta"], curLine)
 						curSet = self.newSet(metaRecord)
 						# utils.writeLog(f"in loop for song {s}, curSet is {curSet['meta']}")
-						inKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYIN"]))
+						inKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYI"]))
 					curLine += 1			# always go to the next line after a metaLine
 					continue
 				else:
@@ -1414,7 +1424,7 @@ categoryTitles = {
 						if lines[curLine][pos] > ' ':
 							if chord == '' and pos > 0:			# no chord in progress, start a chord
 								# first need to close out lyric of chord in progress
-								if startPos == 0 and 'T' in curSet["meta"]["PATTERN"] and needLyric == False:	# if nothing on line yet, add a rest
+								if startPos == 0 and 'T' in curSet["meta"]["PTN"] and needLyric == False:	# if nothing on line yet, add a rest
 									needLyric = self.addChord(inKey, '0', curSet)
 								# needLyric = self.addLyric(curSet, lines[curLine + 1][startPos:pos])
 								needLyric = self.addLyric(curSet, lines, curLine, startPos, pos)
@@ -1431,8 +1441,7 @@ categoryTitles = {
 					self.addChord(inKey, chord, curSet)
 					chord = ''
 					needLyric = self.addLyric(curSet, lines, curLine, startPos, 999)
-					curLine += len(metaRecord["PATTERN"])
-			utils.writeLog(f"out of lines for song {s}, curLine is {curLine}")
+					curLine += len(metaRecord["PTN"])
 			curSet["meta"]["end"] = curLine - 1
 			sets.append(curSet)
 		CHrec["sets"] = sets
@@ -1488,7 +1497,7 @@ categoryTitles = {
 			keyword = values[0].upper()
 			# utils.writeLog('chartMetaLine analyzing {}'.format(pair))
 			if keyword in self.constants["metaKeywords"]: 
-				if keyword in ['KEYIN', 'KEYOUT']:
+				if keyword in ['KEYI', 'KEYO']:
 					values[1] = self.notationCleanUp(values[1])
 				elif keyword == "TYPE" and values[1] not in self.constants["chartSetTypes"]:
 					self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
@@ -1499,7 +1508,7 @@ categoryTitles = {
 		return (meta)
 	def getNewMetaRec(self):
 		# return default metaRecord for chart
-		return {"KEYIN": "X", "KEYOUT": "C", "TYPE": "M", "PATTERN": "MT", "BPM": "000", "RES": "2", "METER": "A"}
+		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A", "COL": 2, "ROW": 20}
 # s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
 # s = Songs('106932376942135580175', 'Olucas', '')
