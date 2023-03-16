@@ -7,6 +7,10 @@ function loadJs(x)
 	var rr = getFromLocal('songBookRR');
 	var dd = getFromLocal('songBookDD');
 	var CHrec;
+	var metronomeStatus = "off";
+	// initialize metronome
+	init()
+	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);
 
 	// detect if you're on a phone, otherwise set for PC
 	// pixel 3a: 507 in portrait
@@ -281,13 +285,16 @@ function addTDtoTR(item, row, className) {
 	}
 	row.appendChild(col);
 }
-// function playMetronome() {
-// 	tempoButton.style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "azure" ;
-// 	play();
-// }
+function playMetronome(e) {
+	$("tempoButton").style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "lightgray" ;
+	tempo = parseInt(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["bpm"]);
+	noteResolution = parseInt(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["noteRes"]);
+	meter = CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["meter"].length * 4;
+	metronomeStatus = play();
+	if (e != null) { e.preventDefault(); }
+}
 function getNextSet(e) {
-	e.preventDefault()
-	// console.log(e);
+	if (e != null) { e.preventDefault(); }	
 	CHrec["currentSetIndex"] = displaySetInPanels();
 	if (CHrec["currentSetIndex"] == CHrec.sets.length) {
 		// $("moreButton").innerHTML = "";				// remove button if no more sets to show
@@ -356,7 +363,7 @@ function createMetronomeDiv(id, divisor) {
 	canvas.setAttribute("id", `${id}canvas`);
 	canvasContext = canvas.getContext("2d")
 	canvas.width = (divisor > 1) ? window.innerWidth/divisor - 16 : 700;
-	canvas.height = 60;
+	canvas.height = 40;
 	canvasContext.strokeStyle = "#ffffff";
 	canvasContext.lineWidth = 2;
 	canvas.style.backgroundColor = "#aaa";
@@ -416,6 +423,7 @@ function showChart(argument) {
 	let g = document.gForm.gId.value;
 	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
+	// console.log(inp);
 	xhttp.open("POST", "getCH.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
 	xhttp.send();
 }
@@ -457,15 +465,15 @@ function showChartIntegrated() {
 	}
 	$("songTitle").innerHTML = CHrec["title"];
 }
-function displayChartPage() {				// called when you press + for next chart page
+function displayChartPage(e) {				// called when you press + for next chart page
+	if (e != null) { e.preventDefault(); }
 	$("cDisplay").innerHTML = '';
 	tbl = newBorderedTable();
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
 	CHrec["currentColumnIndex"] = 0;
 	while (CHrec["currentColumnIndex"] < CHrec["maxColumns"]) {
-		// let columnDiv = createDiv(`column${CHrec["currentColumnIndex"]}`);
-		// columnDiv.style.border = "thin solid #000";
+		// console.log(`new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
 		let setTable = newBorderedTable();												// this holds chart lines
 		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
 		addTDtoTR(setTable, row);
@@ -473,6 +481,8 @@ function displayChartPage() {				// called when you press + for next chart page
 			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
 				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// still room for meta line and at least first lines
 					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
+				} else {
+					CHrec["linesInColumn"] = CHrec["maxLines"];
 				}
 			}
 			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// room for next line
@@ -496,6 +506,7 @@ function displayChartPage() {				// called when you press + for next chart page
 	$("cDisplay").appendChild(tbl);
 	if (CHrec["currentSetIndex"] >= CHrec["sets"].length) {
 		$("moreButton").disabled = true;
+		$("moreButton").style.backgroundColor = "lightgray";
 	}
 }
 function showChartInModal()
@@ -518,6 +529,7 @@ function showChartInModal()
 	displayChartPage();
 	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 		$("moreButton").disabled = false;
+		$("moreButton").style.backgroundColor = "lightgreen";
 	}
 	modal.style.display = "block";
 	window.onclick = function(event) {				// if you click outside the modal, it will always close
@@ -763,30 +775,6 @@ function validateInput()
 	}
 	return true;
 }
-function activateMetronome(parameters) {
-	alert("this shouldn't be called, got here with " + parameters);
-	// let editScreen = parameters.substring(0, 1);
-	// let songId = parameters.substring(1, 4);
-	// // rh = addHTML(rh, `<div class="hoverContainer"><input type="button" ID="tempoButton${songId}" class="chartText bgButton" value="🥁" onclick="play(this)">`)
-	// // rh = addHTML(rh, "<span class='hoverText songInfo'>Start metronome</span></div>")
-	// let metronomeDiv = $("metronome");
-	// tempoButton = createDOMElement("button", $("tempoButton" + songId));
-	// tempoButton.className = "chartText bgButton";
-	// tempoButton.style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "azure" ;
-	// metronomeDiv.appendChild(tempoButton);
-	// let meterString;
-	// if (editScreen == "Y") {
-	// 	tempo = document.gForm.bpm.value;
-	// 	noteResolution = document.gForm.noteResolution.value;
-	// 	meterString = document.gForm.meterString.value;
-	// } else {
-	// 	tempo = parseInt(parameters.substring(4, 7));
-	// 	noteResolution = parseInt(parameters.substring(7, 8))		// 0 == 16th, 1 == 8th, 2 == quarter note
-	// 	meterString = parameters.substring(8);
-	// }
-	// meter = meterString.length * 4;
-	// metronomeStatus = play(tempoButton);
-}
 function revByDate()
 {
 	let d1 = $("RD1").value;
@@ -967,12 +955,14 @@ function cancelEdit() {
 	$("searchResults").innerHTML= sessionStorage.getItem('searchResults');
 }
 function backButton(e) {
+	if (metronomeStatus == "on") {
+		play();				// turn metronome off
+	}
 	if (sessionStorage.getItem('editScreen') != null) {
 		$("searchResults").innerHTML= sessionStorage.getItem('editScreen');
 		sessionStorage.removeItem('editScreen');
 	} else {
 		// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
 		$('chartModal').style.display = "none";
-		e.preventDefault();
-	}
+		if (e != null) { e.preventDefault(); }	}
 }

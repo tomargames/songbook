@@ -86,11 +86,8 @@ function scheduler() {
     nextNote()
   }
 }
-function playMetronome(canvas) {
-    alert("in play, canvas is " + canvas);
-}
-
 function play() {
+  // alert("in metronome.play");
   if (!unlocked) {
     // play silent buffer to unlock the audio
     var buffer = audioContext.createBuffer(1, 1, 22050)
@@ -139,7 +136,8 @@ function draw() {
     canvasContext.clearRect(0, 0, canvas.width, canvas.height)
     for (var i = 0; i < meter; i++) {
       canvasContext.fillStyle = (currentNote == i) ? ((currentNote % 4 === 0) ? "red" : "blue") : "black";
-      canvasContext.fillRect(x * (i + 1), x, x / 2, x / 2);
+      // canvasContext.fillRect(x * (i + 1), x, x / 2, x / 2);
+      canvasContext.fillRect(x * (i + 1), x, x-2, x);
     }
     // alert("drawing, note is " + currentNote);
     last16thNoteDrawn = currentNote
@@ -176,10 +174,10 @@ async function init() {
 
   requestAnimFrame(draw) // start the drawing loop.
 
-timerWorker = new Worker("../metronome/metronomeworker.js")
+  timerWorker = new Worker("../metronome/metronomeworker.js")
  // timerWorker = new Worker("js/metronomeworker.js")
 
-timerWorker.onmessage = function (e) {
+  timerWorker.onmessage = function (e) {
     if (e.data == "tick") {
       // console.log("tick!");
       scheduler()
