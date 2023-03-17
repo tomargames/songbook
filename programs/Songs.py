@@ -1493,18 +1493,20 @@ categoryTitles = {
 		parms = inp.split(', ')				# get each pair from between the commas
 		meta["start"] = lineNumber
 		for pair in parms:
-			values = pair.split(' ')		# values on either side of space
+			values = list(filter(None, pair.split(' ')))
 			keyword = values[0].upper()
-			# utils.writeLog('chartMetaLine analyzing {}'.format(pair))
-			if keyword in self.constants["metaKeywords"]: 
-				if keyword in ['KEYI', 'KEYO']:
-					values[1] = self.notationCleanUp(values[1])
-				elif keyword == "TYPE" and values[1] not in self.constants["chartSetTypes"]:
-					self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
-					values[1] = "M"
-				meta[keyword] = values[1]
+			if len(values) == 2:
+				if keyword in self.constants["metaKeywords"]: 
+					if keyword in ['KEYI', 'KEYO']:
+						values[1] = self.notationCleanUp(values[1])
+					elif keyword == "TYP" and values[1] not in self.constants["chartSetTypes"]:
+						self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
+						values[1] = "M"
+					meta[keyword] = values[1]
+				else:
+					self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {inp} on line {lineNumber}: {strng}')
 			else:
-				self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {inp} on line {lineNumber}: {strng}')
+				self.errors.append(f'chartMetaLine: Improperly constructed keyword/value pair {inp} on line {lineNumber}: {strng}')
 		return (meta)
 	def getNewMetaRec(self):
 		# return default metaRecord for chart

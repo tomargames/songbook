@@ -392,6 +392,7 @@ function newBorderedTable() {
 }
 function showChart(argument) {
 	// argument is YYs -- Y if fresh for NT input, second Y for integrated display modal, then s
+	metronomeStatus = "off";
 	let inp = '';
 	let s = argument.substring(2, 5);
 	let fresh = argument.substring(0, 1);
@@ -493,6 +494,7 @@ function displayChartPage(e) {				// called when you press + for next chart page
 					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 						CHrec["currentLineIndex"] = 0;
 					} else {
+						CHrec["currentSetIndex"] = 0;
 						CHrec["linesInColumn"] = CHrec["maxLines"];
 					}
 				}
