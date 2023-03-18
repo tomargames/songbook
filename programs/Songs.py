@@ -651,7 +651,7 @@ categoryTitles = {
 		rec['DK'] = '0'			#setting deck to empty, so it'll automatically create changeRec
 		rec['CD'] = rec['RL'] = rec['RN'] = str(self.today)
 		rec['RA'] = rec['RT'] = 0
-		rec['NT'] = self.getNewMetaRec()
+		rec['NT'] = "[KEYI X, KEYO X, TYP I, PTN M, BPM 000, RES 2, MTR A, COL 3, ROW 18]"
 		return rec
 	def getSongs(self, q):
 		'''
