@@ -162,7 +162,7 @@ else:
 					try:
 						# utils.writeLog(f"sending {oper}, {s}, RN: {RN}, RL: {form.getvalue('RL','')}, revNote: {form.getvalue('revNote','')}") 
 						rev = sb.processInput(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
-							RN, form.getvalue('RL',''), form.getvalue('revNoteEdit', ''), form.getvalue('bpm', '120'), form.getvalue('meterString', 'A'), form.getvalue('noteResolution', '2'))
+							RN, form.getvalue('RL',''), form.getvalue('revNoteEdit', ''))
 					except Exception as e:
 						print(f'file error: {e}, changeRec is {changeRec}')
 				elif oper[0] == 'S':

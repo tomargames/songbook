@@ -6,7 +6,11 @@ function loadJs(x)
 	sessionStorage.setItem('lastSortedCol', -1);
 	var rr = getFromLocal('songBookRR');
 	var dd = getFromLocal('songBookDD');
+	var CHrec;
 	var metronomeStatus = "off";
+	// initialize metronome
+	init()
+	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);
 
 	// detect if you're on a phone, otherwise set for PC
 	// pixel 3a: 507 in portrait
@@ -166,32 +170,42 @@ function revAction()
 }
 function importChart()
 {
-	// alert('got here with ' + list);
-	let repos = prompt("From which repository? ");
-	if (!(roleList.includes("U" + repos) || roleList.includes("O" + repos)))
-	{
-		alert("You don't have access to " + repos);
-		return;
-	}
-	let key = prompt("Which song ID? ");
-	let inp = key + repos;
-	let s = "IMPORT";
-	let xhttp = new XMLHttpRequest();
-	let modal = $('myModal');
-	xhttp.onreadystatechange = function() 
-	{
-		if (this.readyState == 4 && this.status == 200) 
-		{
-			let chart = this.responseText.replaceAll("xXx", "\n");
-			$("NT").value = chart;
-			enableSave();
-		}
-	};
-	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
-	let r = document.gForm.rr.value;
-	xhttp.open("POST", "getNote.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
-	xhttp.send();
+	alert('this needs to be recoded to be used');
+	// if s == "IMPORT":
+	// try:
+	// 	# utils.writeLog(f"getNote.py: coming in with {s} and {inp}")
+	// 	sb = Songs.Songs(g, f'U{inp[3:]}', d)
+	// 	lines = (sb.songDict[inp[0:3]]["NT"]).split('↩️')
+	// 	for line in lines:
+	// 		print(f'{line}')
+	// except Exception as e:
+	// 	print(f'getNote: error {e} trying to import chart')
+	// above is the python code from getNote, below is js code
+	// let repos = prompt("From which repository? ");
+	// if (!(roleList.includes("U" + repos) || roleList.includes("O" + repos)))
+	// {
+	// 	alert("You don't have access to " + repos);
+	// 	return;
+	// }
+	// let key = prompt("Which song ID? ");
+	// let inp = key + repos;
+	// let s = "IMPORT";
+	// let xhttp = new XMLHttpRequest();
+	// let modal = $('myModal');
+	// xhttp.onreadystatechange = function() 
+	// {
+	// 	if (this.readyState == 4 && this.status == 200) 
+	// 	{
+	// 		let chart = this.responseText.replaceAll("↩️", "\n");
+	// 		$("NT").value = chart;
+	// 		enableSave();
+	// 	}
+	// };
+	// let g = document.gForm.gId.value;
+	// let d = document.gForm.decks.value;
+	// let r = document.gForm.rr.value;
+	// xhttp.open("POST", "getNote.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
+	// xhttp.send();
 }
 function toggleDiv(id)
 {
@@ -210,83 +224,323 @@ function fixSpecialCharacters(str)
 	str = str.replaceAll('#', 'Q');
 	str = str.replaceAll('+', 'aug');
 	str = str.replaceAll('°', 'dim');
+	str = str.replaceAll('↩️', 'crlf');
 	return str;
 }
-// When the user clicks the button, open the modal
-function showNote(argument)
-{
-	// alert('in showNote, argument is ' + argument);
+function createDiv(id, className) {
+	let elem = document.createElement("div");
+	elem.setAttribute('id', id);
+	elem.className = className;
+	// elem.innerHTML = id;
+	return elem;
+}
+function createButton(id, className, functionName, label, hover) {
+	// return a container div with button and hover text
+	let outerDiv = createDiv("outerDiv", "hoverContainer");
+	outerDiv.style.padding = "5px";
+	let button = document.createElement("button");
+	button.setAttribute('id', id);
+	button.className = className;
+	// button.onclick = function() {functionName};
+	button.addEventListener("click", functionName); 
+	button.innerText = label;
+	outerDiv.appendChild(button);
+	let hoverSpan = document.createElement("span");
+	hoverSpan.className = "hoverText songInfo";
+	hoverSpan.innerText = hover;
+	outerDiv.appendChild(hoverSpan);
+	return outerDiv;
+}
+function displayChord(cell) {
+	// return a TD with container div with chord table (note + suffix)button and hover text
+	let TD = document.createElement("td");
+	TD.className = "chartMusic";
+	TD.style.width = "100%";
+	if (["|", "?"].includes(cell)) {
+		TD.className = "token";
+	} else if (cell != "0") {
+		let outerDiv = createDiv("outerDiv", "hoverContainer");	// this holds chordTable and span with hoverText
+		let chordTable = document.createElement("table");		// this holds the parts of the chord
+		chordTable.style.width = "100%";
+		let row = chordTable.insertRow();						// table will only have one row <td> for note, <td> for suffix
+		addTDtoTR(cell.note, row, "chartMusic note");	
+		addTDtoTR(cell.suffix, row, "chartMusic suffix");
+		let hoverSpan = document.createElement("span");
+		hoverSpan.className = "hoverText songInfo";
+		hoverSpan.innerText = cell["hover"];
+		outerDiv.appendChild(chordTable);
+		outerDiv.appendChild(hoverSpan);
+		TD.appendChild(outerDiv);
+	}	
+	return TD;
+}
+function addTDtoTR(item, row, className) {
+	// console.log("addTDtoTR adding " + item + " to " + row);
+	let col = document.createElement("td");
+	if (className) {
+		col.className = className;
+		col.innerText = item;
+	} else {
+		col.appendChild(item);
+	}
+	row.appendChild(col);
+}
+function playMetronome(e) {
+	$("tempoButton").style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "lightgray" ;
+	tempo = parseInt(CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["bpm"]);
+	noteResolution = parseInt(CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["noteRes"]);
+	meter = CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["meter"].length * 4;
+	metronomeStatus = play();
+	if (e != null) { e.preventDefault(); }
+}
+function getNextSet(e) {
+	if (e != null) { e.preventDefault(); }	
+	CHrec["currentSetIndex"] = displaySetInPanels();
+	if (CHrec["currentSetIndex"] == CHrec.sets.length) {
+		// $("moreButton").innerHTML = "";				// remove button if no more sets to show
+		$("moreButton").disabled = true;
+	}
+}
+function displayMetaLine(set, setTable) {
+	// console.log(`in displayMetaLine, CH index is ${CH["currentSet"]}`);
+	let row = setTable.insertRow();			// row for metadata
+	let metaTable = document.createElement("table");
+	metaTable.style.width = "100%";
+	let metaRow = metaTable.insertRow();
+	addTDtoTR(CHrec["currentSetIndex"], metaRow, "chartMeta");
+	addTDtoTR(`Type: ${set["meta"]["type"]}`, metaRow, "chartMeta");
+	addTDtoTR(`Key: ${set["meta"]["key"]}`, metaRow, "chartMeta");
+	addTDtoTR(`BPM: ${set["meta"]["bpm"]}`, metaRow, "chartMeta");
+	addTDtoTR(`Meter: ${set["meta"]["meter"]}`, metaRow, "chartMeta");
+	addTDtoTR(`Pattern: ${set["meta"]["pattern"]}`, metaRow, "chartMeta");
+	addTDtoTR(metaTable, row);
+	CHrec["linesInColumn"] += 1;
+}
+function displayChartLine(set, line, lineIndex, setTable) {
+	let setLineRow = setTable.insertRow();			// one row for each line in set, holds lineTable
+	if (line.length == 1 && line[0]["M"] == 'X') {
+		addTDtoTR(document.createElement("hr"), setLineRow);		// no cells, just a <hr>			
+		CHrec["linesInColumn"] += 1;
+	} else {
+		let lineTable = document.createElement("table");  // table of subordinate rows (1, 2, 3, M, and T) for EACH LINE of the set
+		let col = document.createElement("td");
+		col.style.backgroundColor = (lineIndex % 2 == 0) ? "#EEE" : "#DDD";
+		col.appendChild(lineTable);
+		setLineRow.appendChild(col);
+		// let lineRow = lineTable.insertRow();			// holds table with contents of line, one row for each data type in pattern
+		// for each character in pattern, insert a corresponding row in lineTable and fill it
+		['1', '2', '3', 'M', "T"].forEach((code) => {
+			if (set["meta"]["pattern"].includes(code)) {
+				row = lineTable.insertRow();
+				set["lines"][lineIndex].forEach((cell, cellIndex) => {
+					if (code == "M") {
+						addTDtoTR(displayChord(cell.M), row);
+					} else if (code == "T") {
+						addTDtoTR(cell.T, row, "chartText");
+					}
+				})
+			} // else {
+			// 	console.log(code + " not in this line");
+			// }
+		})
+		CHrec["linesInColumn"] += CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length
+	}	
+}
+function displaySetInPanels() {
+	let setTable = (CHrec["currentSetIndex"] % 2 == 0) ? $("panel0setTable") : $("panel1setTable"); 	// get set table
+	setTable.innerHTML = "";
+	let set = CHrec["sets"][CHrec["currentSetIndex"]];
+	displayMetaLine(set, setTable);							// display set metaData
+	set["lines"].forEach((line, lineIndex) => {				// display lines in set 
+		displayChartLine(set, line, lineIndex, setTable);
+	})
+	return CHrec["currentSetIndex"] + 1;
+}
+function createMetronomeDiv(id, divisor) {
+	let metronomeTable = document.createElement("table");
+	let row = metronomeTable.insertRow(0);
+	canvas = document.createElement("canvas");
+	canvas.setAttribute("id", `${id}canvas`);
+	canvasContext = canvas.getContext("2d")
+	canvas.width = (divisor > 1) ? window.innerWidth/divisor - 16 : 700;
+	canvas.height = 40;
+	canvasContext.strokeStyle = "#ffffff";
+	canvasContext.lineWidth = 2;
+	canvas.style.backgroundColor = "#aaa";
+	addTDtoTR(canvas, row);
+	return metronomeTable;
+}
+function createPanelDiv(id) {
+	// panel1 and panel2
+	// canvas will be panel1canvas
+	// setTable will be panel1setTable, populated in displaySet
+	let panelDiv = createDiv(id);
+	panelDiv.style.border = "1px solid #000"
+	// panel will consist of metronomeTable and setTable
+	let metronomeTable = createMetronomeDiv(id, 2);
+	panelDiv.appendChild(metronomeTable);
+	let setTable = newBorderedTable();
+	setTable.setAttribute("id", `${id}setTable`);
+	panelDiv.appendChild(setTable);
+	return panelDiv;
+}
+function newBorderedTable() {
+	let tbl = document.createElement("table");
+	tbl.style.border = "1px solid #000"
+	tbl.style.width = "100%";
+	return tbl
+}
+function showChart(argument) {
+	// argument is YYs -- Y if fresh for NT input, second Y for integrated display modal, then s
+	metronomeStatus = "off";
 	let inp = '';
-	let s = argument.substring(1, 4);
-	let page = argument.substring(4) * 1;
+	let s = argument.substring(2, 5);
+	let fresh = argument.substring(0, 1);
+	let integratedDisplay = argument.substring(1, 2);
 	let xhttp = new XMLHttpRequest();
-	let modal = $('myModal');
-	if (argument.substring(0, 1) == 'Y')
-	{
-		// replace all newlines with |||
-		inp = (document.gForm.NT.value).replaceAll('\n', "xXx");
+	// console.log(`in showChart, fresh is ${fresh}, integrated is ${integratedDisplay}, inp is ${inp}`);
+	// if you're not in a modal, save search results for redisplay
+	if (integratedDisplay == "Y") {
+		sessionStorage.setItem('editScreen', $('searchResults').innerHTML);			// saving the edit screen to put back up when done, don't need if using modal
+	}  
+	if (fresh == "Y") {
+		// prepare input from NT field
+		inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
 		inp = fixSpecialCharacters(inp);
 		if (inp.length > 5000) {
 			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
 		}
-		// at current default setting, only 8192 bytes can be posted, including all other variables
-		// if we increase it by adding "LimitRequestLine 16384" as done in httpdRequestFix.conf in server configuration
-		// so far this only applies to one song (070, tale of bear and otter), so substituting stored record
-		// if (inp.length > 8000) {
-		// 	if (page == 0) {
-		// 		alert("Chart input is too long, reading from stored record");
-		// 	}
-		// 	inp = '';
-		// } else {
-		// 	inp = fixSpecialCharacters(inp);
-		// }
-	}
-	// console.log(inp);
-	window.onclick = function(event) {				// if you click outside the modal, it will always close
-		if (event.target == modal) {
-			closeChart(modal);
-		}
 	}
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
-			let response = this.responseText;
-			// console.log("in showNote, reponse is " + response);
-			if (response.slice(0, 3) == "EOF") {
-				response = this.responseText.substring(3);
-				$("nClose").innerHTML = "close";
+			CHrec = JSON.parse(this.responseText);
+			if (integratedDisplay == "N") {
+				showChartInModal();
 			} else {
-				$("nClose").innerHTML = "next";
+				showChartIntegrated();
 			}
-			nDisplay.innerHTML = response;
-			modal.style.display = "block";
 		}
 	};
-	$("nClose").onclick = function() {
-		if ($("nClose").innerHTML == "next") {
-			page += 1;
-			showNote(argument.substring(0,1) + s + page);
-		} else {
-			closeChart(modal);
-			if (argument.substring(0,1) == "N") {
-				showDetail(s);
-			}
-		}
-	}
 	let g = document.gForm.gId.value;
 	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
-	xhttp.open("POST", "getNote.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp + '&w=' + window.innerWidth + '&h=' + window.innerHeight + "&page=" + page, true);
+	// console.log(inp);
+	xhttp.open("POST", "getCH.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
 	xhttp.send();
 }
-// Close the chart display modal
-function closeChart(modal) {
-	modal.style.display = "none";
-	if (metronomeStatus != "off") {
-		metronomeStatus.style.backgroundColor = "azure";
-		metronomeStatus = play(metronomeStatus);
+function showChartIntegrated() {
+	// if the metronome div does not exist, run init to create it
+	// if (audioContext == null) {
+	// 	init();
+	// }
+	let numberOfPanels = 2;
+	let srDiv = $('searchResults');
+	srDiv.style.width = "100%";
+	srDiv.innerHTML = "";
+	headerLine = newBorderedTable();
+	srDiv.appendChild(headerLine);
+	let row = headerLine.insertRow();
+	let col = document.createElement("td");
+	col.setAttribute("id", "songTitle");
+	col.className = "reviewTitle";
+	row.appendChild(col);
+	let buttonPanel = createDiv("buttonPanel", "reviewTitle");
+	buttonPanel.appendChild(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"));
+	buttonPanel.appendChild(createButton("backButton", "chartButton", backButton, "❎", "back to list"));
+	addTDtoTR(buttonPanel, row);
+	// add new table to searchResults to hold panel1 and panel2
+	let searchResultsTable = newBorderedTable();
+	srDiv.appendChild(searchResultsTable);
+	row = searchResultsTable.insertRow(); 
+	row.style.verticalAlign = "top";
+	for (let i = 0; i < numberOfPanels; i++) {
+		addTDtoTR(createPanelDiv("panel" + i), row);
 	}
-	// console.log("metronomeStatus is " + metronomeStatus);
+	// now populate the panels
+	CHrec["currentSetIndex"] = 0;
+	// fill up both panels with set lines, after that it will be controlled by metronome or page button
+	CHrec["currentSetIndex"] = displaySetInPanels(); // populate panel1 with first set
+	CHrec["currentSetIndex"] = displaySetInPanels(); // populate panel2 with second set
+	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		buttonPanel.appendChild(createButton("moreButton", "chartButton", getNextSet, "➕", "display next set"));
+	}
+	$("songTitle").innerHTML = CHrec["title"];
 }
+function displayChartPage(e) {				// called when you press + for next chart page
+	if (e != null) { e.preventDefault(); }
+	$("cDisplay").innerHTML = '';
+	tbl = newBorderedTable();
+	let row = tbl.insertRow();
+	row.setAttribute("valign", "top");
+	CHrec["currentColumnIndex"] = 0;
+	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
+	while (CHrec["currentColumnIndex"] < CHrec["maxColumns"]) {
+		// console.log(`new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
+		let setTable = newBorderedTable();												// this holds chart lines
+		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
+		addTDtoTR(setTable, row);
+		while (CHrec["linesInColumn"] < CHrec["maxLines"] && CHrec["currentSetIndex"] < CHrec["sets"].length) {
+			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
+				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// still room for meta line and at least first lines
+					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
+				} else {
+					CHrec["linesInColumn"] = CHrec["maxLines"];
+				}
+			}
+			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// room for next line
+				displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable);
+				CHrec["currentLineIndex"] += 1;
+				if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
+					CHrec["currentSetIndex"] += 1;
+					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+						CHrec["currentLineIndex"] = 0;
+					} else {
+						CHrec["linesInColumn"] = CHrec["maxLines"];
+					}
+				}
+			} else {				// need to make a new column
+				CHrec["linesInColumn"] = CHrec["maxLines"];
+			}
+		}
+		CHrec["currentColumnIndex"] += 1;
+		CHrec["linesInColumn"] = 0;
+	}
+	$("cDisplay").appendChild(tbl);
+	if (CHrec["currentSetIndex"] >= CHrec["sets"].length) {
+		$("moreButton").disabled = true;
+		$("moreButton").style.backgroundColor = "lightgray";
+	}
+}
+function showChartInModal()
+{
+	// alert('in showChartInModal, argument is ' + s);
+	let modal = $('chartModal');
+	CHrec["maxColumns"] = CHrec["sets"][0]["meta"]["columns"];
+	CHrec["maxLines"] = CHrec["sets"][0]["meta"]["lines"];
+	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = 0;
+	let cPanel = $('cPanel');
+	cPanel.innerHTML = '';
+	let bottomTable = newBorderedTable();
+	cPanel.appendChild(bottomTable);
+	row = bottomTable.insertRow();
+	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
+	addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	addTDtoTR(createButton("backButton", "chartButton", backButton, "❎", "close"), row);
+	addTDtoTR(createButton("moreButton", "chartButton", displayChartPage, "➕", "display next page"), row);
+	$("moreButton").disabled = true;
+	displayChartPage();
+	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		$("moreButton").disabled = false;
+		$("moreButton").style.backgroundColor = "lightgreen";
+	}
+	modal.style.display = "block";
+	window.onclick = function(event) {				// if you click outside the modal, it will always close
+		if (event.target == modal) {
+			// modal.style.display = "none";		
+			backButton(event);
+		}
+	}
+}	
 // When the user clicks the button, open the modal
 function showHistory(s)
 {
@@ -396,13 +650,8 @@ function scheduleAndSave(dueDate, bNum, songId)
 {
 	$("RN").disabled = false;
 	$("RN").value = dueDate;
-	// schdSelect = document.getElementsByClassName("songDetail selected");
-	// schdSelect.className = "songDetail button";
-	// $("b" + bNum).className = "songDetail selected";
-	// $("oper").value = "S" + songId;
 	document.gForm.RN.value = dueDate;
 	document.gForm.oper.value = "S" + songId;
-	// console.log("scheduleAndSave, RL is " + document.gForm.RL.value + ", RN is " + document.gForm.RN.value);
 	document.gForm.submit();
 }
 function contractNotes()
@@ -516,43 +765,7 @@ function validateInput()
 		$("TT").focus();
 		return false;
 	}
-	let bpm = $("bpm").value;
-	if (bpm.length < 3 || isNaN(bpm) || bpm > 999) {
-		alert("bpm must be a 3-digit number");
-		$("bpm").focus();
-		return false;
-	} 
-	let meterString = $("meterString").value;
-	if (meterString.length < 1) {
-		document.gForm.meterString.value = "A";
-	}
-	for (let i = 0; i < meterString.length; i++) {
-		if (meterString[i] != "A" && meterString[i] != "B") {
-			alert("only As and Bs in accent string");
-			$("meterString").focus();
-			return false;
-		}
-	}
 	return true;
-}
-function activateMetronome(parameters) {
-	// alert("got here with " + parameters);
-	let editScreen = parameters.substring(0, 1);
-	let songId = parameters.substring(1, 4);
-	let tempoButton = $("tempoButton" + songId);
-	let meterString;
-	tempoButton.style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "azure" ;
-	if (editScreen == "Y") {
-		tempo = document.gForm.bpm.value;
-		noteResolution = document.gForm.noteResolution.value;
-		meterString = document.gForm.meterString.value;
-	} else {
-		tempo = parseInt(parameters.substring(4, 7));
-		noteResolution = parseInt(parameters.substring(7, 8))		// 0 == 16th, 1 == 8th, 2 == quarter note
-		meterString = parameters.substring(8);
-	}
-	meter = meterString.length * 4;
-	metronomeStatus = play(tempoButton);
 }
 function revByDate()
 {
@@ -652,8 +865,9 @@ function execSearch(s, upd = false)
 {
 	// alert('in execSearch with ' + s);
 	if (s.substring(0,1) == "o") {					// this is going to the edit screen, save songList and songDetail
-		sessionStorage.setItem('songList', $("searchResults").innerHTML);
+		sessionStorage.setItem('searchResults', $("searchResults").innerHTML);
 	}
+	sessionStorage.removeItem('editScreen');
 	var xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() 
 	{
@@ -674,15 +888,6 @@ function execSearch(s, upd = false)
 				$("message").innerHTML = this.responseText;
 			}
 			doClear();
-			let metronomeExists = $("metronome");
-			let canvasExists = $("container");
-			if (metronomeExists) {
-				if (!canvasExists) {
-					init();
-				} else {
-					canvasContext.clearRect(0, 0, canvas.width, canvas.height)
-				}
-			} 	 
 		}
 	};
 	// need to send s(query), g(gid), and d(deckString)
@@ -724,11 +929,24 @@ function showDetail(songId) {
 }
 function cancelEdit() {
 	if ($("saveButton") != null) {
-		if ($("saveButton").disabled == false) {			// true if there have been edits
+		if ($("saveButton").disabled == false) {			// true if you're on the edit screen and there have been edits
 			if (confirm("You have unsaved changes that will be lost if you proceed.") == false) {
 				return;
 			}
-		}		
+		}
 	}
-	$("searchResults").innerHTML= sessionStorage.getItem('songList');
+	$("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+}
+function backButton(e) {
+	if (metronomeStatus == "on") {
+		play();				// turn metronome off
+	}
+	if (sessionStorage.getItem('editScreen') != null) {
+		$("searchResults").innerHTML= sessionStorage.getItem('editScreen');
+		sessionStorage.removeItem('editScreen');
+	} else {
+		// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+		$('chartModal').style.display = "none";
+		if (e != null) { e.preventDefault(); }	
+	}
 }
