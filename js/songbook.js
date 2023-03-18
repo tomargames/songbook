@@ -287,9 +287,9 @@ function addTDtoTR(item, row, className) {
 }
 function playMetronome(e) {
 	$("tempoButton").style.backgroundColor = (tempoButton.style.backgroundColor != "lightgreen") ? "lightgreen" : "lightgray" ;
-	tempo = parseInt(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["bpm"]);
-	noteResolution = parseInt(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["noteRes"]);
-	meter = CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["meter"].length * 4;
+	tempo = parseInt(CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["bpm"]);
+	noteResolution = parseInt(CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["noteRes"]);
+	meter = CHrec["sets"][CHrec["pageSetIndex"]]["meta"]["meter"].length * 4;
 	metronomeStatus = play();
 	if (e != null) { e.preventDefault(); }
 }
@@ -473,6 +473,7 @@ function displayChartPage(e) {				// called when you press + for next chart page
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
 	CHrec["currentColumnIndex"] = 0;
+	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
 	while (CHrec["currentColumnIndex"] < CHrec["maxColumns"]) {
 		// console.log(`new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
 		let setTable = newBorderedTable();												// this holds chart lines
@@ -494,7 +495,6 @@ function displayChartPage(e) {				// called when you press + for next chart page
 					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 						CHrec["currentLineIndex"] = 0;
 					} else {
-						CHrec["currentSetIndex"] = 0;
 						CHrec["linesInColumn"] = CHrec["maxLines"];
 					}
 				}
@@ -536,21 +536,11 @@ function showChartInModal()
 	modal.style.display = "block";
 	window.onclick = function(event) {				// if you click outside the modal, it will always close
 		if (event.target == modal) {
-			modal.style.display = "none";		
+			// modal.style.display = "none";		
+			backButton(event);
 		}
 	}
-	$("nClose").onclick = function() {
-		modal.style.display = "none";	}
 }	
-// Close the chart display modal
-function closeChart(modal) {
-	modal.style.display = "none";
-	// if (metronomeStatus != "off") {
-	// 	metronomeStatus.style.backgroundColor = "azure";
-	// 	metronomeStatus = play(metronomeStatus);
-	// }
-	// console.log("metronomeStatus is " + metronomeStatus);
-}
 // When the user clicks the button, open the modal
 function showHistory(s)
 {
@@ -898,15 +888,6 @@ function execSearch(s, upd = false)
 				$("message").innerHTML = this.responseText;
 			}
 			doClear();
-			// let metronomeExists = $("metronome");
-			// let canvasExists = $("container");
-			// if (metronomeExists) {
-			// 	if (!canvasExists) {
-			// 		init();
-			// 	} else {
-			// 		canvasContext.clearRect(0, 0, canvas.width, canvas.height)
-			// 	}
-			// } 	 
 		}
 	};
 	// need to send s(query), g(gid), and d(deckString)
@@ -966,5 +947,6 @@ function backButton(e) {
 	} else {
 		// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
 		$('chartModal').style.display = "none";
-		if (e != null) { e.preventDefault(); }	}
+		if (e != null) { e.preventDefault(); }	
+	}
 }
