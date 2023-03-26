@@ -1242,7 +1242,7 @@ categoryTitles = {
 							CH = self.createChartRecord(self.songDict[songId]['NT'], songId)
 							if len(CH["sets"]) > 0:
 								# now optimize before saving to reviewCharts file
-								# newRec = self.revChartProcess(CH[1])
+								# newRec = self.revChartProcess(CH)
 								revChartDict[songId] = CH
 								# first, remove all references to this songId from chordUsageDict
 								for ch in chordUsageDict:
@@ -1251,8 +1251,8 @@ categoryTitles = {
 								# then, add entries for every chord in the song
 								for s in range(len(CH["sets"])):				# for each set
 									key = CH["sets"][s]["meta"]["KEYOUT"]
-									for l in range(len(CH[1][s]["lines"])):				# for each line in the set
-										for c in range(len(CH[1][s]["lines"][l])):						# for each cell in the line
+									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
+										for c in range(len(CH["sets"][s]["lines"][l])):						# for each cell in the line
 											if CH["sets"][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
 												if songId in chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
 													# utils.writeLog(f"hit the line where it might abend")
