@@ -1250,7 +1250,7 @@ categoryTitles = {
 										chordUsageDict[ch].pop(songId)
 								# then, add entries for every chord in the song
 								for s in range(len(CH["sets"])):				# for each set
-									key = CH["sets"][s]["meta"]["KEYOUT"]
+									key = CH["sets"][s]["meta"]["KEYO"]
 									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
 										for c in range(len(CH["sets"][s]["lines"][l])):						# for each cell in the line
 											if CH["sets"][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
@@ -1269,7 +1269,7 @@ categoryTitles = {
 								pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
 								pdf.ln()
 								for s in range(len(CH["sets"])):				# for each set
-									key = CH["sets"][s]["meta"]["KEYOUT"]
+									key = CH["sets"][s]["meta"]["KEYO"]
 									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
 										if len(CH["sets"][s]["lines"][l]) == 1 and CH["sets"][s]["lines"][l][0]["M"] == "X":
 											pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
@@ -1476,10 +1476,6 @@ categoryTitles = {
 			rh += f'''<td class="listText {addClass}">{elem["T"]}</td>''' 
 		return rh
 	def chartMetaLine(self, strng, curMeta, lineNumber):
-		#[KEYIN G, KEYOUT G, TYPE V, PATTERN MT]
-		# KEYIN 		if not a valid key, use X, then this is a text display
-		# KEYOUT		if not a valid key, use C
-		# TYPE 			validate against self.constants["chartSetTypes"]
 		meta = curMeta.copy()
 		inp = strng.strip()[1:-1]			# remove brackets from around id
 		parms = inp.split(', ')				# get each pair from between the commas
