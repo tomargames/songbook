@@ -387,8 +387,8 @@ class Songs(object):
 <div id="chartModal" class="modal">
   <!-- Modal content for chart display -->
   <div class="modal-content">
-	<div id="cDisplay" class="chartModal">filler</div>
     <div id="cPanel" class="chartButton">filler</div>
+	<div id="cDisplay" class="chartModal">filler</div>
   </div>
 </div>  
 <div id="smallModal" class="smallmodal">
@@ -458,9 +458,10 @@ categoryTitles = {
 		for s in sorted(self.deckFilter()):
 			if self.rr[0] == "O":		#if user is owner
 				songTitle = f'{self.songDict[s]["TT"]} ({self.songDict[s]["RN"]})' 
+				rh += f'<option value="o{s}">Song: {songTitle}  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})</option>'  
 			else:
 				songTitle = self.songDict[s]["TT"]
-			rh += f'<option value="o{s}">Song: {songTitle}  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})</option>'  
+				rh += f'<option value="O{s}">Song: {songTitle}  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})</option>'  	
 		for t in sorted(self.tagFilter()):
 			#<option value="o000">Song: Cry Me a River   (Vocal)</option>
 			rh += f'<option value="{encodeHtml(t)}">{self.config["tagCtgs"][t[0]]["title"]}: {t[1:]}({len(self.tagDict[t[0]][t[1:]])})</option>' 
@@ -1048,7 +1049,6 @@ categoryTitles = {
 			actions += f'<td>{button}</td>'
 		# actions += f'<td>{self.metronomeButton(s, "N")}</td>'
 		if self.songDict[s]["CS"] in [0, 1]:
-			# button = self.makeButton(self.constants["icons"]["chart"], f'showNote("N{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
 			button = self.makeButton(self.constants["icons"]["chart"], f'showChart("NN{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
 			actions += f'<td>{button}</td>'
 		for m in self.songDict[s]["SB"]:
@@ -1096,10 +1096,7 @@ categoryTitles = {
 				hidden += f'<td hidden>{self.songDict[s]["RT"]}</td><!--RT(4)-->'
 				rh += f'<td class="detailLink">{self.songLink(s)}</td>'
 			else:
-				if self.songDict[s]["CS"] in [0, 1]:
-					rh += f'<td class="detailLink"><a title="Display chart for {self.songDict[s]["TT"]}" class="listText" href=javascript:showNote("N{s}")>{self.songDict[s]["TT"]}</a></td>'
-				else:
-					rh += f'<td class="detailLink"><a title="Details for {self.songDict[s]["TT"]}" class="listText noChart" href=javascript:showDetail("{s}")>{self.songDict[s]["TT"]}</a></td>'
+				rh += f'<td class="detailLink"><a title="Details for {self.songDict[s]["TT"]}" class="listText noChart" href=javascript:showDetail("{s}")>{self.songDict[s]["TT"]}</a></td>'
 			rh += hidden
 			rh += f'<td class="actions">{self.songLinkButtons(s)}</td>'
 		else:
@@ -1243,27 +1240,27 @@ categoryTitles = {
 						# processNTtoCH returns (rc, record)
 						try:
 							CH = self.createChartRecord(self.songDict[songId]['NT'], songId)
-							if CH[0] == 'good' or CH[0] == 'err1':
+							if len(CH["sets"]) > 0:
 								# now optimize before saving to reviewCharts file
-								# newRec = self.revChartProcess(CH[1])
-								revChartDict[songId] = CH[1]
+								# newRec = self.revChartProcess(CH)
+								revChartDict[songId] = CH
 								# first, remove all references to this songId from chordUsageDict
 								for ch in chordUsageDict:
 									if songId in chordUsageDict[ch]:
 										chordUsageDict[ch].pop(songId)
 								# then, add entries for every chord in the song
-								for s in range(len(CH[1])):				# for each set
-									key = CH[1][s]["meta"]["KEYOUT"]
-									for l in range(len(CH[1][s]["lines"])):				# for each line in the set
-										for c in range(len(CH[1][s]["lines"][l])):						# for each cell in the line
-											if CH[1][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
-												if songId in chordUsageDict[CH[1][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
+								for s in range(len(CH["sets"])):				# for each set
+									key = CH["sets"][s]["meta"]["KEYOUT"]
+									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
+										for c in range(len(CH["sets"][s]["lines"][l])):						# for each cell in the line
+											if CH["sets"][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
+												if songId in chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
 													# utils.writeLog(f"hit the line where it might abend")
-													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
+													chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
 												else:
-													chordUsageDict[CH[1][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
+													chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
 											else:
-												chordUsageDict[CH[1][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
+												chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
 								# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
 								pdf = FPDF()
 								pdf.add_page()
@@ -1271,14 +1268,14 @@ categoryTitles = {
 								pdf.set_font("courier", size = 16, style = 'B')
 								pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
 								pdf.ln()
-								for s in range(len(CH[1])):				# for each set
-									key = CH[1][s]["meta"]["KEYOUT"]
-									for l in range(len(CH[1][s]["lines"])):				# for each line in the set
-										if len(CH[1][s]["lines"][l]) == 1 and CH[1][s]["lines"][l][0]["M"] == "X":
+								for s in range(len(CH["sets"])):				# for each set
+									key = CH["sets"][s]["meta"]["KEYOUT"]
+									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
+										if len(CH["sets"][s]["lines"][l]) == 1 and CH["sets"][s]["lines"][l][0]["M"] == "X":
 											pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
 										else:
 											musicLine = textLine = ''
-											for c in CH[1][s]["lines"][l]:						# for each cell in the line
+											for c in CH["sets"][s]["lines"][l]:						# for each cell in the line
 												# utils.writeLog(f'pdf processing for set {s} line {l} cell {c}')
 												# size of cell will be longer of len(M) and len(T) + 1
 												txtLength = 0 if "T" not in c else len(c["T"])
@@ -1288,19 +1285,14 @@ categoryTitles = {
 												textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
 											pdf.set_font("courier", size = 14, style = "B")
 											pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
-											if "T" in CH[1][s]["meta"]["PTN"]:
+											if "T" in CH["sets"][s]["meta"]["PTN"]:
 												pdf.set_font("courier", size = 14, style = "")
 												pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
 											pdf.ln()
 									# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
 								pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{songId}.pdf')
 								pdf.output(pdfFile)
-							if CH[0] != 'good':
-								# collect messages
-								self.songDict[songId]['CS'] = int(CH[0][3])
-								self.errors.append(f'{songId}: {self.songDict[songId]["TT"]}, {CH[0]}' )
-							else:
-								self.songDict[songId]['CS'] = 0
+							self.songDict[songId]['CS'] = len(CH["errors"])
 						except Exception as e:
 							utils.writeLog(f'updateReviewHistory ERROR on {songId} {self.songDict[songId]["TT"]}: {e}' )
 						# if this is first record for song/date, insert it as is to both files

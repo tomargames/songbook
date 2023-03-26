@@ -273,6 +273,8 @@ table
    /* Position the tooltip text - see examples below! */
   position: absolute;
   z-index: 1;
+  top: 100%;
+  left: 10%;
 }
 .hoverText.songInfo {
   width: 200px;

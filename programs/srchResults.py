@@ -30,7 +30,7 @@ form = cgi.FieldStorage() # instantiate only once!
 		# elif qType == 'x':			#get due
 		# elif qType == 'AJamesTaylor':	#tag search, tag ctg followed by tag
 # s = form.getvalue('s', 'O08S')							#remove default
-s = form.getvalue('s', 'O000')							#remove default
+s = form.getvalue('s', 'u')							#remove default
 r = form.getvalue('r', 'Omarie')					#remove default
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')

@@ -70,6 +70,8 @@
     "sheet": "🎼",
     "close": "❎",
     "more": "➕",
+    "next": "➡️",
+    "previous": "🔙",
     "newline": "↩️"
   },
   "metronomeNoteResolution": {
