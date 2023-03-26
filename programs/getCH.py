@@ -15,7 +15,7 @@ import utils
 
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '0D2')						#songID or IMPORT
+s = form.getvalue('s', '0EB')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
@@ -58,7 +58,6 @@ else:
 			outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
 			for line in set["lines"]:
 				if line[0]['M'] != 'X':
-					# utils.writeLog(f"in loop for set: {counter[0]}, line {counter[1]}")
 					outrec[-1]["lines"].append([])
 					for elem in line:
 						outrec[-1]["lines"][-1].append(elem)
@@ -82,5 +81,6 @@ else:
 		# utils.writeLog(f"returning {outrec}")
 		print(json.dumps(CHrecord))
 	except Exception as ee:
-		print(f'getCH, uncaught ERROR: {ee}<br><hr>')
+		utils.writeLog(f'getCH, uncaught ERROR: {ee}')
+		print(json.dumps({}))
 		

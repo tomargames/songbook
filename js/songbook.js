@@ -255,6 +255,7 @@ function displayChord(cell) {
 	// return a TD with container div with chord table (note + suffix)button and hover text
 	let TD = document.createElement("td");
 	TD.className = "chartMusic";
+	// TD.style.fontSize = "1.2em";
 	TD.style.width = "100%";
 	if (["|", "?"].includes(cell)) {
 		TD.className = "token";
@@ -466,9 +467,8 @@ function showChartIntegrated() {
 	}
 	$("songTitle").innerHTML = CHrec["title"];
 }
-function displayChartPage(e) {				// called when you press + for next chart page
+function createChartPage(e) {				// called when you press + for next chart page
 	if (e != null) { e.preventDefault(); }
-	$("cDisplay").innerHTML = '';
 	tbl = newBorderedTable();
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
@@ -505,19 +505,50 @@ function displayChartPage(e) {				// called when you press + for next chart page
 		CHrec["currentColumnIndex"] += 1;
 		CHrec["linesInColumn"] = 0;
 	}
-	$("cDisplay").appendChild(tbl);
-	if (CHrec["currentSetIndex"] >= CHrec["sets"].length) {
-		$("moreButton").disabled = true;
-		$("moreButton").style.backgroundColor = "lightgray";
+	CHrec["pages"].push(tbl);										// store current html
+}
+function displayPrevChartPage(e) {
+	CHrec["currentPageIndex"] -= 1;
+	displayChartPage();
+	if (e != null) { e.preventDefault(); }
+}
+function displayNextChartPage(e) {
+	CHrec["currentPageIndex"] += 1;
+	displayChartPage();
+	if (e != null) { e.preventDefault(); }
+}
+function displayChartPage(e) {
+	let modal = $('chartModal');
+	$("cDisplay").innerHTML = '';
+	$("cDisplay").appendChild(CHrec["pages"][CHrec["currentPageIndex"]]);
+	if (CHrec["currentPageIndex"] > 0) {
+		$("prevButton").disabled = false;
+		$("prevButton").style.backgroundColor = "lightgreen";
+	} else {
+		$("prevButton").disabled = true;
+		$("prevButton").style.backgroundColor = "lightgray";
+	}
+	if (CHrec["currentPageIndex"] < CHrec["pages"].length - 1) {
+		$("nextButton").disabled = false;
+		$("nextButton").style.backgroundColor = "lightgreen";
+	} else {
+		$("nextButton").disabled = true;
+		$("nextButton").style.backgroundColor = "lightgray";
+	}
+	modal.style.display = "block";
+	window.onclick = function(event) {				// if you click outside the modal, it will always close
+		if (event.target == modal) {
+			backButton(event);
+		}
 	}
 }
 function showChartInModal()
 {
 	// alert('in showChartInModal, argument is ' + s);
-	let modal = $('chartModal');
 	CHrec["maxColumns"] = CHrec["sets"][0]["meta"]["columns"];
 	CHrec["maxLines"] = CHrec["sets"][0]["meta"]["lines"];
-	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = 0;
+	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = CHrec["currentPageIndex"] = 0;
+	CHrec["pages"] = [];
 	let cPanel = $('cPanel');
 	cPanel.innerHTML = '';
 	let bottomTable = newBorderedTable();
@@ -525,21 +556,15 @@ function showChartInModal()
 	row = bottomTable.insertRow();
 	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
 	addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	addTDtoTR(createButton("prevButton", "chartButton", displayPrevChartPage, "🔙", "previous page"), row);
+	addTDtoTR(createButton("nextButton", "chartButton", displayNextChartPage, "➡️", "next page"), row);
 	addTDtoTR(createButton("backButton", "chartButton", backButton, "❎", "close"), row);
-	addTDtoTR(createButton("moreButton", "chartButton", displayChartPage, "➕", "display next page"), row);
-	$("moreButton").disabled = true;
-	displayChartPage();
-	if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
-		$("moreButton").disabled = false;
-		$("moreButton").style.backgroundColor = "lightgreen";
+	$("nextButton").disabled = true;
+	$("prevButton").disabled = true;
+	while (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		createChartPage();
 	}
-	modal.style.display = "block";
-	window.onclick = function(event) {				// if you click outside the modal, it will always close
-		if (event.target == modal) {
-			// modal.style.display = "none";		
-			backButton(event);
-		}
-	}
+	displayChartPage(0);
 }	
 // When the user clicks the button, open the modal
 function showHistory(s)
