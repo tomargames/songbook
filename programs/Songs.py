@@ -215,15 +215,17 @@ class Songs(object):
 	def findChordInDB(self, chord, key):
 		if chord in self.chordDB[key]:
 			return self.chordDB[key][chord]["code"]
-		if len(chord) > 1 and chord[0:2] in ["C#", "Db", "D#", "Eb", "F#", "Gb", "A#", "Bb", "G#", "Ab"]:
-			return self.getAlternateNote(chord, 2, key)
-		elif chord[0:1] in ["E", "F", "B", "C"]:
-			return self.getAlternateNote(chord, 1, key)
+		if chord in self.musicConstants["tokens"]:
+			return chord
 		token = '?'
-		if chord[0] in self.musicConstants["tokens"]:
-			token = chord[0]
-		else:
-			self.errors.append(f'returning ? for {chord} in key {key}, unknown token {token}')
+		# if len(chord) > 1 and chord[0:2] in ["C#", "Db", "D#", "Eb", "F#", "Gb", "A#", "Bb", "G#", "Ab"]:
+		# 	return self.getAlternateNote(chord, 2, key)
+		# elif chord[0:1] in ["E", "F", "B", "C"]:
+		# 	return self.getAlternateNote(chord, 1, key)
+		# if chord[0] in self.musicConstants["tokens"]:
+		# 	token = chord[0]
+		# else:
+		# 	self.errors.append(f'returning ? for {chord} in key {key}, unknown token {token}')
 		return token
 	def getAlternateNote(self, chord, length, key):
 		note = chord[0:length]
@@ -330,15 +332,19 @@ class Songs(object):
 			rh += '</td>'
 		rh += '</tr></table>'
 		return rh
-	def jsFunctions(self):
+	def jsFunctions(self, device):
 		rh = ''
+		# utils.writeLog(f"coming into jsFunctions, device = {device}")
 		# deckString -- if empty, default to everything on, and populate the form "decks"
 		print(f'<script>document.gForm.decks.value = "{self.deckString}"; ')
+		if device == '':
+			device = "0"
+			print('document.gForm.device.value = "0"; ')
+			# utils.writeLog("set device value on gForm")
 		for r in self.roleList:
 			print(f' roleList.push("{r}"); ')
 		print('</script>')
 		#if self.rr is blank, this is your first time in, look for cookie
-		#print('<script>document.gForm.rr.value = "{}"; </script>'.format(self.rr))
 		rh += f'<datalist id="searchList">{self.dataList()}</datalist>' 
 		rh += '''
 <table border=0><tr valign="top"><td>		
@@ -350,7 +356,6 @@ class Songs(object):
 			# drop-down with getdue, addcard, and ?
 			rh += '<select id="RA" name="RA" oninput=revAction()>'
 			rh += '<option value='f'>Options for role {self.rr}</option>' 
-			# rh += '<option value="RPT">Data</option>'
 			if self.rr[0] == 'O':
 				rh += '<option value="DUE">Due</option>'
 				rh += '<option value="ADD">Add card</option>'
@@ -359,11 +364,13 @@ class Songs(object):
 				rh += '<option value="RVD">Reviewed by date</option>'
 				rh += '<option value="INA">Inactive</option>'
 				rh += '<option value="ADM">Admin</option>'
-				# rh += '<option value="CHD">Chord Palette</option>'
 				rh += '<option value="RPT">Data</option>'			
+				# rh += '<option value="CHD">Chord Palette</option>'
 				# rh += '<option value="SET">Settings</option>'
-				rh += '<option value="ERR">Chart errors</option>'
+				# rh += '<option value="ERR">Chart errors</option>'
 				rh += '<option value="UPD">Update review history</option>'
+			rh += '<option value=''>----------Device ID----------</option>'
+			rh += '<option value="DVC">Change device</option>'
 			if len(self.roleList) > 1:
 				rh += '<option value=''>----------ROLES----------</option>'
 				for r in sorted(self.roleList):
@@ -764,6 +771,7 @@ categoryTitles = {
 		# then userfields that are text, txts, or date
 		# then NT, SG, and userfields that are link
 		rh += '<table id="detailTable" border=1 width=100%><thead>'
+		# rh += '<table id="detailTable" class="sortable"><thead>'
 		rh += self.detailHeader(reviewMode)
 		''' rslt is a list of songIds
 			output is a <table> with a <tr> for each song in the list
@@ -988,7 +996,7 @@ categoryTitles = {
 			else:
 				style = "songDetail button"
 			js = f'scheduleAndSave("{newDate}","{r[1]}","{s}"); ' 
-			b = self.makeButton(r[0], js, style, f'b{r[1]}',"", f'{r[1]} days')
+			b = self.makeButton(r[0], js, style, f'b{r[1]}',"", f'{r[1]} days, {newDate}')
 			buttonDisplay.append(f'<td style="text-align: center;">{b}</td>')
 			ctr += 1
 		ctr = 0
@@ -1488,13 +1496,18 @@ categoryTitles = {
 					if keyword in ['KEYI', 'KEYO']:
 						values[1] = self.notationCleanUp(values[1])
 					elif keyword == "TYP" and values[1] not in self.constants["chartSetTypes"]:
+						utils.writeLog(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
 						self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
 						values[1] = "M"
 					meta[keyword] = values[1]
+				elif keyword[0:2] in ["RO", "CO"] and keyword[2] in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
+					meta[keyword] = values[1]
 				else:
-					self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {inp} on line {lineNumber}: {strng}')
+					utils.writeLog(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
+					self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
 			else:
-				self.errors.append(f'chartMetaLine: Improperly constructed keyword/value pair {inp} on line {lineNumber}: {strng}')
+				utils.writeLog(f'chartMetaLine: Improperly constructed keyword/value pair on line {lineNumber}: {strng}')
+				self.errors.append(f'chartMetaLine: Improperly constructed keyword/value pair on line {lineNumber}: {strng}')
 		return (meta)
 	def getNewMetaRec(self):
 		# return default metaRecord for chart
@@ -1506,3 +1519,5 @@ categoryTitles = {
 # s = Songs('106932376942135580175', 'OmarieNme', '')
 # s = Songs('106932376942135580175', 'Ochris', '')
 # s = Songs('106932376942135580175', 'Omiranda', '')
+# s = Songs('106932376942135580175', 'Omarie', '')
+# CH = s.createChartRecord(s.songDict["01K"]["NT"], "01K")

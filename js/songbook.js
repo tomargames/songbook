@@ -4,23 +4,19 @@ function $(x) {
 function loadJs(x)
 {
 	sessionStorage.setItem('lastSortedCol', -1);
-	var rr = getFromLocal('songBookRR');
-	var dd = getFromLocal('songBookDD');
-	var CHrec;
+	var CHrec, rr, dd;
+	rr = getFromLocal('songBookRR');
+	dd = getFromLocal('songBookDD');
+	let device = getFromLocal('songBookDevice');
+	if (device == null) {
+		device = 0;
+	}
+	document.gForm.device.value = device;
+	saveLocal("songBookDevice", device);
 	var metronomeStatus = "off";
 	// initialize metronome
-	init()
+	init();
 	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);
-
-	// detect if you're on a phone, otherwise set for PC
-	// pixel 3a: 507 in portrait
-	// pixel 3a: 760 in landscape
-	// tablet: 800 in portrait
-	// new lenovo: 1280 
-	// tablet: 1280 in landscape
-	// at piano: 1600
-	// computer room monitor: 1920
-	// alert('window.innerWidth = ' + window.innerWidth);
 	if (window.innerWidth > 1000)	
 	{
 		$("searchBox").focus();
@@ -137,14 +133,25 @@ function revAction()
 		{
 			doSearch("m");			//build input form for admin settings
 		}
+		else if (j == 'DVC')
+		{
+			let device = document.gForm.device.value;
+			device = prompt(`Current device is ${device}. Enter a number from 0 to 9 to change:`);
+			if (isNaN(device) || device > 9) {
+				alert(`${device} isn't valid, not updating`);
+			} else {
+				document.gForm.device.value = device;
+				saveLocal("songBookDevice", device);
+			}
+		}
 		// else if (j == 'SET')
 		// {
 		// 	doSearch("s");			// build input form for user preferences
 		// }
-		else if (j == 'ERR')
-		{
-			doSearch("e");			// work on chart errors
-		}
+		// else if (j == 'ERR')
+		// {
+		// 	doSearch("e");			// work on chart errors
+		// }
 		else if (j == 'INA')
 		{
 			doSearch("i");			// get inactive songs
@@ -153,10 +160,10 @@ function revAction()
 		{
 			execSearch("u", true);			// update reviewHistory, put result in message area
 		}
-		else if (j == 'CHD')
-		{
-			openLink("../programs/chordPalette.py");			// chord Palette, open in new tab
-		}
+		// else if (j == 'CHD')
+		// {
+		// 	openLink("../programs/chordPalette.py");			// chord Palette, open in new tab
+		// }
 		else
 		{
 			//this is a role, and you need to set it and reload the page
@@ -258,7 +265,12 @@ function displayChord(cell) {
 	// TD.style.fontSize = "1.2em";
 	TD.style.width = "100%";
 	if (["|", "?"].includes(cell)) {
-		TD.className = "token";
+		if (cell == "|") {
+			TD.className = "chartMusic token";
+		} else {
+			TD.className = "chartMusic error";
+		}
+		TD.innerHTML = cell;
 	} else if (cell != "0") {
 		let outerDiv = createDiv("outerDiv", "hoverContainer");	// this holds chordTable and span with hoverText
 		let chordTable = document.createElement("table");		// this holds the parts of the chord
@@ -405,16 +417,25 @@ function showChart(argument) {
 		sessionStorage.setItem('editScreen', $('searchResults').innerHTML);			// saving the edit screen to put back up when done, don't need if using modal
 	}  
 	if (fresh == "Y") {
-		// prepare input from NT field
-		inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
-		inp = fixSpecialCharacters(inp);
-		if (inp.length > 5000) {
-			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
+		// prepare input from NT field if it might have changed
+		if ($("saveButton").disabled == false) {
+			// alert("using fresh input");
+			inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
+			inp = fixSpecialCharacters(inp);
+			if (inp.length > 5000) {
+				alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
+			}
 		}
 	}
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			CHrec = JSON.parse(this.responseText);
+			if (document.gForm.device.value > "0") {
+				if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
+					CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
+					CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
+				}
+			}
 			if (integratedDisplay == "N") {
 				showChartInModal();
 			} else {
@@ -555,7 +576,9 @@ function showChartInModal()
 	cPanel.appendChild(bottomTable);
 	row = bottomTable.insertRow();
 	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
-	addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	if (CHrec["sets"][0]["meta"]["bpm"] != "000") {
+		addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	}
 	addTDtoTR(createButton("prevButton", "chartButton", displayPrevChartPage, "🔙", "previous page"), row);
 	addTDtoTR(createButton("nextButton", "chartButton", displayNextChartPage, "➡️", "next page"), row);
 	addTDtoTR(createButton("backButton", "chartButton", backButton, "❎", "close"), row);
@@ -598,7 +621,7 @@ function showHistory(s)
 }
 function sortTable(col)
 {
-	//console.log("sorting column " + col);
+	// console.log("sorting column " + col);
 	var table, rows, switching, i, x, y, shouldSwitch;
 	table = $("detailTable");
 	switching = true;
@@ -613,18 +636,26 @@ function sortTable(col)
 			shouldSwitch = false;
 			/*Get the two elements you want to compare, one from current row and one from the next:*/
 			x = rows[i].getElementsByTagName("TD")[col];
-			//console.log("looking at " + x.innerText);
 			y = rows[i + 1].getElementsByTagName("TD")[col];
+			if (x.childNodes.length === 1 && x.childNodes[0].nodeType === Node.TEXT_NODE) {
+				x = x.innerText.toLowerCase();
+				y = y.innerText.toLowerCase();
+				// console.log("x is " + x + " and " + "y is " + y);
+			} else {
+				// console.log("x is starting out " + x);
+				x = x.childNodes[0].childNodes[0];
+				// console.log("x is now " + x);
+			}
 			if (sessionStorage.getItem('lastSortedCol') == col)
 			{
-				if (x.innerText.toLowerCase() < y.innerText.toLowerCase())
+				if (x < y)
 				{
 					//if so, mark as a switch and break the loop:
 					shouldSwitch= true;
 					break;
 				}
 			}
-			else if (x.innerText.toLowerCase() > y.innerText.toLowerCase())
+			else if (x > y)
 			{
 				//if so, mark as a switch and break the loop:
 				shouldSwitch= true;

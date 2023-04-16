@@ -36,6 +36,7 @@ gImg = form.getvalue('gImage', '')	#remove default
 oper = form.getvalue('oper','')
 decks = form.getvalue('decks','')
 rr = form.getvalue('rr','')
+device = form.getvalue('device','')
 
 # if there's a repository coming in, put it in the title
 if len(rr) > 1:
@@ -69,10 +70,12 @@ print(f'''
 <input type="hidden" name="gMail" value="{gMail}">
 <input type="hidden" name="gImage" value="{gImg}">
 <input type="hidden" name="oper" value="">
-<input type="hidden" name="decks" value={decks}>
-<input type="hidden" name="rr" value={rr}>
+<input type="hidden" name="decks" value="{decks}">
+<input type="hidden" name="rr" value="{rr}">
+<input type="hidden" name="device" value="{device}">
 <input type="hidden" name="RL" value="{str(datetime.date.today())}">
 ''')											#</form is left off, so song input can be added to form
+# utils.writeLog(f"index.py, rr is {rr}, dd is {decks}, device is {device}")
 if rr == '':									# if first time in, get from cookie
 	print('''
 		<script>
@@ -82,6 +85,7 @@ if rr == '':									# if first time in, get from cookie
 			{
 				document.gForm.decks.value = dd;
 				document.gForm.rr.value = rr;
+				document.gForm.device.value = "0";
 				document.gForm.submit();
 			}
 		</script>''')
@@ -174,12 +178,12 @@ else:
 						print(f'error writing review record: {e}')
 				#response will send stuff back, then
 				sb = Songs.Songs(gid, rr, decks)
-				print(sb.jsFunctions())
+				print(sb.jsFunctions(device))
 				# utils.writeLog(f"rev={rev}")
 				# put the message in the message area
 				renderHtml(f"<script>document.getElementById('message').innerHTML = '<div class=message>{rev}</div>'; </script>")
 			else:
-				print(sb.jsFunctions())
+				print(sb.jsFunctions(device))
 		print('</div>')
 	else:
 		print('''

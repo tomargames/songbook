@@ -15,7 +15,7 @@ import utils
 
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '0EB')						#songID or IMPORT
+s = form.getvalue('s', '0B2')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
@@ -56,11 +56,16 @@ else:
 			outrec[-1]["meta"]["meter"] = set["meta"]["MTR"]
 			outrec[-1]["meta"]["columns"] = set["meta"]["COL"]
 			outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
+			for i in range(9):
+				if f"CO{i}" in set["meta"] and f"RO{i}" in set["meta"]:
+					outrec[-1]["meta"][f"CO{i}"] = set["meta"][f"CO{i}"]
+					outrec[-1]["meta"][f"RO{i}"] = set["meta"][f"RO{i}"]
 			for line in set["lines"]:
 				if line[0]['M'] != 'X':
 					outrec[-1]["lines"].append([])
 					for elem in line:
 						outrec[-1]["lines"][-1].append(elem)
+						# utils.writeLog(f"doing find on elem {elem}")
 						inv = elem['M'].find('i')				# look for an inversion
 						if elem['M'] > '0' and elem['M'] not in sb.musicConstants["tokens"]:			# tokens are special characters and chords not integrated yet
 							if inv > -1:						# this is an inversion, split it into cPart and bPart
