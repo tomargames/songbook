@@ -138,7 +138,7 @@ table
 .chartMusic.token
 {
   border: none;
-  color: darkcyan;
+  color: purple;
 }
 .chartMusic.note
 {
@@ -285,4 +285,38 @@ table
 /* Show the tooltip text when you mouse over the tooltip container */
 .hoverContainer:hover .hoverText {
   visibility: visible;
+}
+table.sortable {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+table.sortable thead th {
+  cursor: pointer;
+}
+
+table.sortable thead th:after {
+  content: "\25b2";
+  float: right;
+}
+
+table.sortable thead th:before {
+  content: "";
+  float: right;
+  margin-right: 5px;
+  border-bottom: 5px solid transparent;
+  border-top: 5px solid transparent;
+}
+
+table.sortable thead th.asc:after {
+  content: "\25bc";
+}
+
+table.sortable thead th.desc:before {
+  border-bottom: 5px solid black;
+}
+
+table.sortable tbody td {
+  border: 1px solid black;
+  padding: 5px;
 }
