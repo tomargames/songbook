@@ -314,19 +314,41 @@ function getNextSet(e) {
 		$("moreButton").disabled = true;
 	}
 }
+function editSet(setId) {
+	// you will only get here from the chart modal -- close the modal
+	$('chartModal').style.display = "none";
+	// now you are on the edit page, so save it
+	sessionStorage.setItem('editScreen', $('searchResults').innerHTML);			// saving the edit screen to put back up when done, don't need if using modal
+	showChartIntegrated(setId);
+	// alert(`edit set #${setID}, not coded yet`);
+	// showChart(`YY${CHrec["id"]}`);
+	// if (e != null) { e.preventDefault(); }	
+}
 function displayMetaLine(set, setTable) {
 	// console.log(`in displayMetaLine, CH index is ${CH["currentSet"]}`);
 	let row = setTable.insertRow();			// row for metadata
-	let metaTable = document.createElement("table");
+	row.style.backgroundColor = "#333";
+	let metaTable = document.createElement("table");		// this set identifier and edit button
 	metaTable.style.width = "100%";
 	let metaRow = metaTable.insertRow();
-	addTDtoTR(CHrec["currentSetIndex"], metaRow, "chartMeta");
-	addTDtoTR(`Type: ${set["meta"]["type"]}`, metaRow, "chartMeta");
-	addTDtoTR(`Key: ${set["meta"]["key"]}`, metaRow, "chartMeta");
-	addTDtoTR(`BPM: ${set["meta"]["bpm"]}`, metaRow, "chartMeta");
-	addTDtoTR(`Meter: ${set["meta"]["meter"]}`, metaRow, "chartMeta");
-	addTDtoTR(`Pattern: ${set["meta"]["pattern"]}`, metaRow, "chartMeta");
-	addTDtoTR(metaTable, row);
+	let outerDiv = createDiv("outerDiv", "hoverContainer");	// this holds metaRow and span with hoverText
+	let mrow = metaTable.insertRow();						// table will only have one row <td> for setID, <td> for edit button
+	addTDtoTR(CHrec["currentSetIndex"], mrow, "chartMeta");		// need to add edit button to this
+	addTDtoTR(set["meta"]["type"], mrow, "chartMeta");
+	if (CHrec["fresh"] == "Y") {
+		let a = document.createElement('a'); 
+		let link = document.createTextNode("📝");
+		a.appendChild(link); 
+  		a.title = "edit"; 
+		a.href = `javascript: editSet(${CHrec["currentSetIndex"]})`;
+ 		addTDtoTR(a, mrow);
+	}
+	let hoverSpan = document.createElement("span");
+	hoverSpan.className = "hoverText songInfo";
+	hoverSpan.innerHTML = `BPM: ${set["meta"]["bpm"]}<br>Meter: ${set["meta"]["meter"]}<br>Key: ${set["meta"]["key"]}`;
+	outerDiv.appendChild(metaTable);
+	outerDiv.appendChild(hoverSpan);
+	addTDtoTR(outerDiv, row);
 	CHrec["linesInColumn"] += 1;
 }
 function displayChartLine(set, line, lineIndex, setTable) {
@@ -405,6 +427,7 @@ function newBorderedTable() {
 }
 function showChart(argument) {
 	// argument is YYs -- Y if fresh for NT input, second Y for integrated display modal, then s
+	// console.log(`in showChart, argument is ${argument}`);
 	metronomeStatus = "off";
 	let inp = '';
 	let s = argument.substring(2, 5);
@@ -414,32 +437,34 @@ function showChart(argument) {
 	// console.log(`in showChart, fresh is ${fresh}, integrated is ${integratedDisplay}, inp is ${inp}`);
 	// if you're not in a modal, save search results for redisplay
 	if (integratedDisplay == "Y") {
+		// console.log("saving edit screen html");
 		sessionStorage.setItem('editScreen', $('searchResults').innerHTML);			// saving the edit screen to put back up when done, don't need if using modal
 	}  
 	if (fresh == "Y") {
 		// prepare input from NT field if it might have changed
-		if ($("saveButton").disabled == false) {
-			// alert("using fresh input");
-			inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
-			inp = fixSpecialCharacters(inp);
-			if (inp.length > 5000) {
-				alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
-			}
+		// if ($("saveButton").disabled == false) {
+		inp = (document.gForm.NT.value).replaceAll('\n', "↩️");
+		inp = fixSpecialCharacters(inp);
+		if (inp.length > 5000) {
+			alert("Maybe too much input; if this chart doesn't appear, save the record, and try it from the stored record.")
 		}
 	}
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			CHrec = JSON.parse(this.responseText);
-			if (document.gForm.device.value > "0") {
-				if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
-					CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
-					CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
-				}
-			}
+			CHrec["id"] = s;
+			CHrec["fresh"] = fresh;
+			CHrec["edit"] = integratedDisplay;
+			// if (document.gForm.device.value > "0") {
+			// 	if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
+			// 		CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
+			// 		CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
+			// 	}
+			// }
 			if (integratedDisplay == "N") {
 				showChartInModal();
 			} else {
-				showChartIntegrated();
+				showChartIntegrated(0);
 			}
 		}
 	};
@@ -450,12 +475,18 @@ function showChart(argument) {
 	xhttp.open("POST", "getCH.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + '&inp=' + inp, true);
 	xhttp.send();
 }
-function showChartIntegrated() {
+function showChartIntegrated(setId) {
 	// if the metronome div does not exist, run init to create it
 	// if (audioContext == null) {
 	// 	init();
 	// }
-	let numberOfPanels = 2;
+	// need to capture textarea as a set of lines
+	let NT = ($('NT').value).split('\n');
+	CHrec["currentSetIndex"] = setId;
+	let textInput = '';
+	for (let i = CHrec["sets"][setId]["meta"]["start"]; i < CHrec["sets"][setId]["meta"]["end"]; i++) {
+		textInput = `${textInput}${NT[i]}\n`;
+	}
 	let srDiv = $('searchResults');
 	srDiv.style.width = "100%";
 	srDiv.innerHTML = "";
@@ -475,9 +506,17 @@ function showChartIntegrated() {
 	srDiv.appendChild(searchResultsTable);
 	row = searchResultsTable.insertRow(); 
 	row.style.verticalAlign = "top";
-	for (let i = 0; i < numberOfPanels; i++) {
-		addTDtoTR(createPanelDiv("panel" + i), row);
-	}
+	// two panels will be NTinput on left, interpreted code on right
+	let codePanel = createDiv("codeDiv", "NTinput");
+	codePanel.style.border = "1px solid #000";
+	let textArea = document.createElement("textarea");
+	textArea.setAttribute("id","setCode");
+	textArea.setAttribute("cols", 60);
+	textArea.setAttribute("rows", 12);
+	textArea.value = textInput;
+	codePanel.appendChild(textArea);
+	addTDtoTR(codePanel, row);
+	addTDtoTR(createPanelDiv("renderDiv"), row);
 	// now populate the panels
 	CHrec["currentSetIndex"] = 0;
 	// fill up both panels with set lines, after that it will be controlled by metronome or page button
@@ -625,6 +664,18 @@ function sortTable(col)
 	var table, rows, switching, i, x, y, shouldSwitch;
 	table = $("detailTable");
 	switching = true;
+	let role = document.gForm.rr.value;
+	if (col == 0) { 
+		col = 10; 
+	} else if (role.substring(0, 1) == "O") { // this allows for 0 (title) -> 10, deck, etc. (1, 2, 3, 4), then (5) -> 11, (6) -> 12, etc. 
+		if (col > 4) {
+			col += 6;
+		}
+	} else {		// this allows for 0 (title) -> 10, deck (1), then (2) -> 11, (3) -> 12, etc. 
+		if (col > 1) {
+			col += 9;
+		}
+	}
 	/*Make a loop that will continue until no switching has been done:*/
 	while (switching)
 	{
@@ -634,9 +685,14 @@ function sortTable(col)
 		for (i = 0; i < (rows.length - 1); i++)
 		{
 			shouldSwitch = false;
-			/*Get the two elements you want to compare, one from current row and one from the next:*/
-			x = rows[i].getElementsByTagName("TD")[col];
-			y = rows[i + 1].getElementsByTagName("TD")[col];
+			if (col < 10) {
+				/*Get the two elements you want to compare, one from current row and one from the next:*/
+				x = rows[i].getElementsByTagName("TD")[col];
+				y = rows[i + 1].getElementsByTagName("TD")[col];
+			} else {
+				x = rows[i].getElementsByClassName("listItem")[col - 10];
+				y = rows[i + 1].getElementsByClassName("listItem")[col - 10];
+			}
 			if (x.childNodes.length === 1 && x.childNodes[0].nodeType === Node.TEXT_NODE) {
 				x = x.innerText.toLowerCase();
 				y = y.innerText.toLowerCase();
@@ -760,31 +816,13 @@ function addTag(ctg)
 }
 function copySong(id)
 {
-	validateInput();
-	document.gForm.oper.value = "C" + id;
-	//alert("copySong, oper is " + document.gForm.oper.value);
-	document.gForm.submit();
+	validateAndSubmit(`C${id}`);
 }
 function editSong(id)
 {
-	if (validateInput()) {
-		RN = $("customRN");
-		document.gForm.RN.value = RN.value;
-		document.gForm.oper.value = "E" + id;
-		document.gForm.submit();
-	}
+	validateAndSubmit(`E${id}`);
 }
-function validateCustomDate()
-{
-	if ($("customRN").value < (new Date()).toISOString().split('T')[0]) {
-		alert("Scheduled date must be in the future.");
-		$("customRN").focus();
-		return false;
-	}
-	enableSave();
-}
-function validateInput()
-{
+function validateAndSubmit(oper) {
 	for (i = 0; i < 5; i++)
 	{
 		// if TYP is enabled, corresponding LBL and VAL must be filled, else disable all
@@ -808,20 +846,29 @@ function validateInput()
 			}
 		}
 	}
-	$("RN").disabled = false;
-	if ($("customRN").value < (new Date()).toISOString().split('T')[0]) {
-		if (!(confirm("Save without scheduling?"))) {
-			$("customRN").focus();
-			return false;
-		}
-	}
 	if ($("TT").value == '')
 	{
 		alert('Must have a title!');
 		$("TT").focus();
 		return false;
 	}
-	return true;
+	$("RN").disabled = false;
+	let RN = $("customRN");
+	if (RN.value < (new Date()).toISOString().split('T')[0]) {
+		if (!(confirm("Save without scheduling?"))) {
+			RN.focus();
+			return false;
+		}
+	}
+	else if (RN.value < (new Date()).toISOString().split('T')[0]) {
+		alert("Scheduled date must be in the future.");
+		RN.focus();
+		return false;
+	} 
+	enableSave();
+	document.gForm.oper.value = oper;
+	document.gForm.RN.value = RN.value;
+	document.gForm.submit();
 }
 function revByDate()
 {
