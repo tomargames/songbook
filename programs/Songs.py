@@ -85,7 +85,7 @@ class Songs(object):
 	def songLink(self, s):
 		songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
 		title = f'''<span class="hoverText songInfo"><b>ID: </b>{s}<br> <b>Due:</b> {self.songDict[s]['RN']}<br> <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}<br> <b>Total:</b> {self.songDict[s]['RT']}<br> <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
-		display = f'''<div class=hoverContainer><a class=listText href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
+		display = f'''<div class=hoverContainer><a class=listItem href=javascript:doSearch("o{s}");>{songTitle}</a>{title}</div>'''
 		# utils.writeLog(f'display is {display}')
 		return display
 		# return f'<a title="{title}" href=javascript:doSearch("o{s}"); class="listText">{self.songDict[s]["TT"]}</a>'
@@ -123,7 +123,6 @@ class Songs(object):
 			rev = e
 		return rev
 	def processInput(self, oper, changeRec, NT, RN, RL, revNote):
-		# utils.writeLog(f'processInput: NT is {NT}')
 		s = oper[1:]
 		if s == utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3):
 		#new record, put an empty dict into songdict
@@ -148,10 +147,11 @@ class Songs(object):
 			if len(changeRec[f]) > 0:
 				self.songDict[s][f] = changeRec[f][1]
 		self.songDict[s]["RL"] = RL
+		# utils.writeLog(f"RN is {RN}, on record it's {self.songDict[s]['RN']}")
 		if RN != self.songDict[s]["RN"]:					# if no schedule date specified, put today's date in due date
 			self.songDict[s]["RN"] = RN
-		else:
-			self.songDict[s]["RN"] = str(self.today)
+		# else:
+		# 	self.songDict[s]["RN"] = str(self.today)
 		if self.songDict[s]["NT"] != NT:					#if change to existing NT, add it to changeRec
 			changeRec["NT"] = True
 			self.songDict[s]["NT"] = NT
@@ -176,7 +176,7 @@ class Songs(object):
 					rev = f'Error saving record: {self.songLink(s)}'
 					utils.writeLog(f'Error on save, rev = {rev}')
 				else:
-					#reviewed today, write a review record	
+					# utils.writeLog(f"writing review record for {s}")	
 					try:
 						if self.recReview(s, revNote, changeRec, RL, RN) != 'good':
 							rev = f'Record saved, error writing review record for {self.songLink(s)}' 
@@ -185,7 +185,7 @@ class Songs(object):
 					except Exception as e:
 						utils.writeLog(f"Exception in recReview on song {s}: {e}" )
 						rev = e
-		#  utils.writeLog(f'processInput for song {s} rev {rev}')
+		# utils.writeLog(f'processInput for song {s} rev {rev}')
 		return rev
 	def addLyric(self, curSet, lines, curLine, start, end):
 		if 'T' in curSet["meta"]["PTN"]:
@@ -685,6 +685,7 @@ categoryTitles = {
 			s = utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)
 			self.songDict[s] = self.songDict[k].copy()
 			self.songDict[s]["RL"] = self.songDict[s]["RN"] = ""
+			self.songDict[s]["CD"] = str(self.today)
 			self.songDict[s]["TT"] = f"{self.songDict[k]['TT']} (copy)"
 			possibles.append(s)
 			copy = k
@@ -794,9 +795,9 @@ categoryTitles = {
 			rh += f'<th class="chartMeta sz80"><a class="chartMeta sz80" href="javascript:sortTable({0});">Title</a></th>' 		# title
 		if self.rr[0] == "O" and not reviewMode:			# adding column for due date, RA, and RT -  add to offset
 			rh += '<th hidden>Due</th><th hidden>RA</th><th hidden>RT</th>'
-			sortOffset = 6
+			sortOffset = 5
 		else:
-			sortOffset = 3				# title, deck, and chart go before first tag
+			sortOffset = 2				# title, deck, and chart go before first tag
 		if not reviewMode:
 			rh += f'<th class="chartMeta">{self.constants["icons"]["info"]}</th>'
 		n = 0
@@ -811,7 +812,8 @@ categoryTitles = {
 			for f in self.userFieldOrder:
 				if self.config["userFields"][f]["type"] in ["text", "txts", "date"] and not reviewMode:
 					title = self.config["userFields"][f]["title"]
-					rh += f'<th class="chartMeta sz80"><a title="Sort by {title}" class="chartMeta sz80" href="javascript:sortTable({n + 2});">{title}</a></th>' 
+					# rh += f'<th class="chartMeta sz80"><a title="Sort by {title}" class="chartMeta sz80" href="javascript:sortTable({n + 2});">{title}</a></th>' 
+					rh += f'<th class="chartMeta sz80">{title}</th>' 
 		rh += '</tr></thead><tbody>'
 		return f"<tr>{rh}</tr>"
 	def makeButton(self, value, onclick, style, id, disabled, title):
@@ -1151,7 +1153,7 @@ categoryTitles = {
 		tName = t[1:]
 		tType = self.config["tagCtgs"][t[0]]["title"]
 		hover = f'<span class=hoverText><b>{tType}: {tName}:</b> {tCount} songs</span>'
-		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="listText">{t[1:]}</a>{hover}</div>'
+		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="listItem">{t[1:]}</a>{hover}</div>'
 	def newChangeRec(self):
 		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
 		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": False}
@@ -1245,7 +1247,7 @@ categoryTitles = {
 						revSongDict[songId] = {}
 					#only process CH-related stuff if NT field has changed
 					if "NT" in changeRec and changeRec["NT"] == True:
-						# processNTtoCH returns (rc, record)
+						utils.writeLog(f'making a new chart for {songId}')
 						try:
 							CH = self.createChartRecord(self.songDict[songId]['NT'], songId)
 							if len(CH["sets"]) > 0:
@@ -1269,37 +1271,6 @@ categoryTitles = {
 													chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
 											else:
 												chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
-								# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
-								pdf = FPDF()
-								pdf.add_page()
-								pdf.set_author("ToMarGames SongBook")
-								pdf.set_font("courier", size = 16, style = 'B')
-								pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
-								pdf.ln()
-								for s in range(len(CH["sets"])):				# for each set
-									key = CH["sets"][s]["meta"]["KEYO"]
-									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
-										if len(CH["sets"][s]["lines"][l]) == 1 and CH["sets"][s]["lines"][l][0]["M"] == "X":
-											pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-										else:
-											musicLine = textLine = ''
-											for c in CH["sets"][s]["lines"][l]:						# for each cell in the line
-												# utils.writeLog(f'pdf processing for set {s} line {l} cell {c}')
-												# size of cell will be longer of len(M) and len(T) + 1
-												txtLength = 0 if "T" not in c else len(c["T"])
-												chord = self.getChordNameInKey(c["M"], key)
-												cellLength = max(len(chord), txtLength) + 1
-												musicLine += chord.ljust(cellLength)
-												textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
-											pdf.set_font("courier", size = 14, style = "B")
-											pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
-											if "T" in CH["sets"][s]["meta"]["PTN"]:
-												pdf.set_font("courier", size = 14, style = "")
-												pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
-											pdf.ln()
-									# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-								pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{songId}.pdf')
-								pdf.output(pdfFile)
 							self.songDict[songId]['CS'] = len(CH["errors"])
 						except Exception as e:
 							utils.writeLog(f'updateReviewHistory ERROR on {songId} {self.songDict[songId]["TT"]}: {e}' )
@@ -1367,6 +1338,49 @@ categoryTitles = {
 		else:
 			message = 'No updates necessary'
 		return message
+	def createPDF(self, songId, CH):
+		# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
+		pdf = FPDF()
+		pdf.add_page()
+		pdf.set_author("ToMarGames SongBook")
+		# pdf.add_font('Calibri Regular', '', 'calibri_regular.ttf', uni=True)
+		# pdf.set_font('Calibri Regular', '', 14)		
+		pdf.set_font("courier", size = 14, style = 'B')
+		pdf.set_text_color(0, 0, 0)
+		pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
+		pdf.ln()
+		for s in range(len(CH["sets"])):				# for each set
+			key = CH["sets"][s]["meta"]["KEYO"]
+			for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
+				if len(CH["sets"][s]["lines"][l]) == 1 and CH["sets"][s]["lines"][l][0]["M"] == "X":
+					pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
+				else:
+					musicLine = textLine = ''
+					for c in CH["sets"][s]["lines"][l]:						# for each cell in the line
+						# utils.writeLog(f'pdf processing for set {s} line {l} cell {c}')
+						# size of cell will be longer of len(M) and len(T) + 1
+						txtLength = 0 if "T" not in c else len(c["T"])
+						chord = self.getChordNameInKey(c["M"], key)
+						cellLength = max(len(chord), txtLength) + 1
+						musicLine += chord.ljust(cellLength)
+						textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
+					# pdf.set_font("letter gothic", size = 14, style = "B")		# courier
+					pdf.set_text_color(54, 51, 255)
+					pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
+					if "T" in CH["sets"][s]["meta"]["PTN"]:
+						# pdf.set_font("courier", size = 14, style = "")
+						pdf.set_text_color(0, 0, 0)
+						try:
+							pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
+						except Exception as e:
+							# self.errors.append(f"id {songId}, set {s}, line {l}" bad character in line")
+							utils.writeLog(f"id {songId}, set {s}, line {l} bad character in line")
+							pdf.cell(200, 6, txt = "problem on this line, check input", ln = 1, align = 'L')
+					pdf.ln()
+		# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
+		pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{songId}.pdf')
+		pdf.output(pdfFile)
+		# utils.writeLog(f"wrote pdf to file for {songId}")
 	def setKey(self, key):
 		if key[-1] == 'm':
 			return self.musicConstants["relativeMajor"][key[0:-1]]
@@ -1446,6 +1460,8 @@ categoryTitles = {
 			sets.append(curSet)
 		CHrec["sets"] = sets
 		CHrec["errors"] = self.errors				# add errors to status list
+		# utils.writeLog(f"creating new pdf for {s}")
+		self.createPDF(s, CHrec)
 		return CHrec
 	def getChordNameInKey(self, code, key):
 		cPart = bPart = ''
