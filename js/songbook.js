@@ -452,19 +452,23 @@ function showChart(argument) {
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			CHrec = JSON.parse(this.responseText);
-			CHrec["id"] = s;
-			CHrec["fresh"] = fresh;
-			CHrec["edit"] = integratedDisplay;
-			// if (document.gForm.device.value > "0") {
-			// 	if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
-			// 		CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
-			// 		CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
-			// 	}
-			// }
-			if (integratedDisplay == "N") {
-				showChartInModal();
+			if (Object.keys(CHrec).length == 0) {
+				alert("Problem creating chart, check log");
 			} else {
-				showChartIntegrated(0);
+				CHrec["id"] = s;
+				CHrec["fresh"] = fresh;
+				CHrec["edit"] = integratedDisplay;
+				// if (document.gForm.device.value > "0") {
+				// 	if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
+				// 		CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
+				// 		CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
+				// 	}
+				// }
+				if (integratedDisplay == "N") {
+					showChartInModal();
+				} else {
+					showChartIntegrated(0);
+				}
 			}
 		}
 	};
