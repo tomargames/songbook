@@ -15,7 +15,7 @@ import utils
 
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
-s = form.getvalue('s', '08P')						#songID or IMPORT
+s = form.getvalue('s', '034')						#songID or IMPORT
 g = form.getvalue('g','106932376942135580175')		#remove default
 d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
