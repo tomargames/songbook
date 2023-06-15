@@ -289,7 +289,15 @@ table
   padding: 10;
   font-size: 20px;
 }
+.hoverlink {
+  font-size: 16px;
+  color: white;
+}
 /* Show the tooltip text when you mouse over the tooltip container */
 .hoverContainer:hover .hoverText {
   visibility: visible;
+}
+.clock {
+  font-size: 16px;
+  font-weight: bold;
 }

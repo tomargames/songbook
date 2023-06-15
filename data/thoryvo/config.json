@@ -9,14 +9,14 @@
 	"tagCtgs":
 	{
 		"A":{"seq": 0,"title": "Artist"},
-		"B":{"seq": 9,"title": "BPM"},
+		"B":{"seq": 6,"title": "Alek"},
 		"C":{"seq": 2,"title": "Sets"},
 		"G":{"seq": 3,"title": "Order"},
-		"H":{"seq": 6,"title": "Peach"},
-		"K":{"seq": 4,"title": "Key"},
+		"H":{"seq": 5,"title": "Peach"},
+		"K":{"seq": 7,"title": "Marie"},
 		"M":{"seq": 8,"title": "Rob"},
-		"O":{"seq": 5,"title": "Capo"},
-		"S":{"seq": 7,"title": "Jay"},
+		"O":{"seq": 9,"title": "Capo"},
+		"S":{"seq": 4,"title": "Jay"},
 		"Y":{"seq": 1,"title": "Year"}
 	},
 	"reviewOptions":

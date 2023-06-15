@@ -4,15 +4,15 @@ function $(x) {
 function loadJs(x)
 {
 	sessionStorage.setItem('lastSortedCol', -1);
-	var CHrec, rr, dd;
+	var CHrec, rr, dd, CHcols, CHlines, dialog;
 	rr = getFromLocal('songBookRR');
 	dd = getFromLocal('songBookDD');
-	let device = getFromLocal('songBookDevice');
-	if (device == null) {
-		device = 0;
+	CHcols = getFromLocal('songBookCols');
+	CHlines = getFromLocal('songBookRows');
+	if (CHcols == null || CHlines == null) {
+		alert("Set the rows and columns for chart display on this device.");
+		settingsDialog();
 	}
-	document.gForm.device.value = device;
-	saveLocal("songBookDevice", device);
 	var metronomeStatus = "off";
 	// initialize metronome
 	init();
@@ -133,25 +133,10 @@ function revAction()
 		{
 			doSearch("m");			//build input form for admin settings
 		}
-		else if (j == 'DVC')
+		else if (j == 'SET')
 		{
-			let device = document.gForm.device.value;
-			device = prompt(`Current device is ${device}. Enter a number from 0 to 9 to change:`);
-			if (isNaN(device) || device > 9) {
-				alert(`${device} isn't valid, not updating`);
-			} else {
-				document.gForm.device.value = device;
-				saveLocal("songBookDevice", device);
-			}
+			settingsDialog();
 		}
-		// else if (j == 'SET')
-		// {
-		// 	doSearch("s");			// build input form for user preferences
-		// }
-		// else if (j == 'ERR')
-		// {
-		// 	doSearch("e");			// work on chart errors
-		// }
 		else if (j == 'INA')
 		{
 			doSearch("i");			// get inactive songs
@@ -160,10 +145,6 @@ function revAction()
 		{
 			execSearch("u", true);			// update reviewHistory, put result in message area
 		}
-		// else if (j == 'CHD')
-		// {
-		// 	openLink("../programs/chordPalette.py");			// chord Palette, open in new tab
-		// }
 		else
 		{
 			//this is a role, and you need to set it and reload the page
@@ -174,6 +155,28 @@ function revAction()
 		}
 		$("RA").value = '';
 	}
+}
+function settingsDialog() {
+	dialog = $("settings");	// build input form for user preferences
+	dialog.showModal();
+	$("chartRows").value = getFromLocal("songBookRows");
+	$("chartColumns").value = getFromLocal("songBookCols");
+	$("saveSettings").addEventListener("click", (event) => {
+		let cols = ($("chartColumns").value) * 1;
+		let rows = ($("chartRows").value) * 1;
+		if (cols > 0 && cols < 9) {
+			saveLocal("songBookCols", cols);
+		} else {
+			alert("Columns should be a number from 1 to 4");
+		}
+		if (rows > 0) {
+			saveLocal("songBookRows", rows);
+		} else {
+			alert("Rows should be a number greater than 0");
+		}
+		event.preventDefault();
+		dialog.close();
+	})
 }
 function importChart()
 {
@@ -458,12 +461,7 @@ function showChart(argument) {
 				CHrec["id"] = s;
 				CHrec["fresh"] = fresh;
 				CHrec["edit"] = integratedDisplay;
-				// if (document.gForm.device.value > "0") {
-				// 	if (`RO${document.gForm.device.value}` in CHrec["sets"][0]["meta"] && `CO${document.gForm.device.value}` in CHrec["sets"][0]["meta"]) {
-				// 		CHrec["sets"][0]["meta"]["columns"] = CHrec["sets"][0]["meta"][`CO${document.gForm.device.value}`]; 
-				// 		CHrec["sets"][0]["meta"]["lines"] = CHrec["sets"][0]["meta"][`RO${document.gForm.device.value}`]; 
-				// 	}
-				// }
+				CHrec["startTime"] = CHrec["elapsed"] = 0;
 				if (integratedDisplay == "N") {
 					showChartInModal();
 				} else {
@@ -536,22 +534,24 @@ function createChartPage(e) {				// called when you press + for next chart page
 	tbl = newBorderedTable();
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
+	CHcols = getFromLocal('songBookCols');
+	CHlines = getFromLocal('songBookRows');
 	CHrec["currentColumnIndex"] = 0;
 	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
-	while (CHrec["currentColumnIndex"] < CHrec["maxColumns"]) {
+	while (CHrec["currentColumnIndex"] < CHcols) {
 		// console.log(`new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
 		let setTable = newBorderedTable();												// this holds chart lines
 		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
 		addTDtoTR(setTable, row);
-		while (CHrec["linesInColumn"] < CHrec["maxLines"] && CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		while (CHrec["linesInColumn"] < CHlines && CHrec["currentSetIndex"] < CHrec["sets"].length) {
 			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
-				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// still room for meta line and at least first lines
+				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHlines) {	// still room for meta line and at least first lines
 					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
 				} else {
-					CHrec["linesInColumn"] = CHrec["maxLines"];
+					CHrec["linesInColumn"] = CHlines;
 				}
 			}
-			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHrec["maxLines"]) {	// room for next line
+			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHlines) {	// room for next line
 				displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable);
 				CHrec["currentLineIndex"] += 1;
 				if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
@@ -559,11 +559,11 @@ function createChartPage(e) {				// called when you press + for next chart page
 					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 						CHrec["currentLineIndex"] = 0;
 					} else {
-						CHrec["linesInColumn"] = CHrec["maxLines"];
+						CHrec["linesInColumn"] = CHlines;
 					}
 				}
 			} else {				// need to make a new column
-				CHrec["linesInColumn"] = CHrec["maxLines"];
+				CHrec["linesInColumn"] = CHlines;
 			}
 		}
 		CHrec["currentColumnIndex"] += 1;
@@ -606,11 +606,30 @@ function displayChartPage(e) {
 		}
 	}
 }
+function startTimer(e) {
+	if (CHrec["startTime"] > 0) {
+		clearInterval(CHrec["interval"]);
+	} else {
+		CHrec["startTime"] = parseInt(Date.now());
+		let tb = $("timerButton");
+		tb.textContent = "🛑";
+		CHrec["interval"] = setInterval(showTime, 1000);
+	}
+	e.preventDefault();
+}
+function timerDisplay(secs) {
+	let seconds = secs % 60;
+	let minutes = parseInt(secs/60);
+	return formatNumber(minutes, 2) + ":" + formatNumber(seconds, 2);
+}
+function showTime(){
+	let current = parseInt(Date.now());
+	CHrec["elapsed"] = parseInt((current - CHrec["startTime"]) / 1000);	
+	document.getElementsByClassName("clock")[0].innerHTML = timerDisplay(CHrec["elapsed"]);
+}
 function showChartInModal()
 {
 	// alert('in showChartInModal, argument is ' + s);
-	CHrec["maxColumns"] = CHrec["sets"][0]["meta"]["columns"];
-	CHrec["maxLines"] = CHrec["sets"][0]["meta"]["lines"];
 	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = CHrec["currentPageIndex"] = 0;
 	CHrec["pages"] = [];
 	let cPanel = $('cPanel');
@@ -619,6 +638,8 @@ function showChartInModal()
 	cPanel.appendChild(bottomTable);
 	row = bottomTable.insertRow();
 	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
+	addTDtoTR(createButton("timerButton", "chartButton", startTimer, "⌛", "start timer"), row);
+	addTDtoTR(timerDisplay(0), row, "clock");
 	if (CHrec["sets"][0]["meta"]["bpm"] != "000") {
 		addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
 	}
@@ -662,6 +683,16 @@ function showHistory(s)
 	xhttp.open("GET", "getHistory.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r, true);
  	xhttp.send();
 }
+function getSortItem(c, r, rows) {
+	// console.log(`getting item for column ${c}, row ${r}`);
+	let rtn = "";
+	let x = rows[r].getElementsByClassName("listItem")[c - 10];
+	if (x.childNodes.length === 1 && x.childNodes[0].nodeType === Node.TEXT_NODE) {
+		rtn = x.innerText.toLowerCase();
+	}
+	// console.log(`returning ${rtn}`);
+	return rtn;
+}
 function sortTable(col)
 {
 	// console.log("sorting column " + col);
@@ -680,6 +711,7 @@ function sortTable(col)
 			col += 9;
 		}
 	}
+	// console.log("after adjustments, column is now " + col);
 	/*Make a loop that will continue until no switching has been done:*/
 	while (switching)
 	{
@@ -694,17 +726,8 @@ function sortTable(col)
 				x = rows[i].getElementsByTagName("TD")[col];
 				y = rows[i + 1].getElementsByTagName("TD")[col];
 			} else {
-				x = rows[i].getElementsByClassName("listItem")[col - 10];
-				y = rows[i + 1].getElementsByClassName("listItem")[col - 10];
-			}
-			if (x.childNodes.length === 1 && x.childNodes[0].nodeType === Node.TEXT_NODE) {
-				x = x.innerText.toLowerCase();
-				y = y.innerText.toLowerCase();
-				// console.log("x is " + x + " and " + "y is " + y);
-			} else {
-				// console.log("x is starting out " + x);
-				x = x.childNodes[0].childNodes[0];
-				// console.log("x is now " + x);
+				x = getSortItem(col, i, rows);
+				y = getSortItem(col, i + 1, rows);
 			}
 			if (sessionStorage.getItem('lastSortedCol') == col)
 			{
@@ -770,24 +793,6 @@ function scheduleAndSave(dueDate, bNum, songId)
 	document.gForm.oper.value = "S" + songId;
 	document.gForm.submit();
 }
-function contractNotes()
-{
-	$("NT").rows = 1;
-	$("expandButton").value = '+ Notes';
-}
-function notesToggle()
-{
-	// toggle notes textarea between 1 and 20 rows
-	if ($("NT").rows == 50)
-	{
-		contractNotes();
-	}
-	else
-	{
-		$("NT").rows = 50;
-		$("expandButton").value = '- Notes';
-	}
-}
 function addTag(ctg)
 {
 	//changing to use TAG input field dynamically by calling tagList.py
@@ -801,7 +806,7 @@ function addTag(ctg)
 			$("TAG" + i).placeholder = ctg + " (add " + categoryTitles[ctg] + ")";
 			// contractNotes();
 			$("TAG" + i).focus();
-			var xhttp = new XMLHttpRequest();
+			let xhttp = new XMLHttpRequest();
 			xhttp.onreadystatechange = function() 
 			{
 				if (this.readyState == 4 && this.status == 200) 
@@ -825,6 +830,15 @@ function copySong(id)
 function editSong(id)
 {
 	validateAndSubmit(`E${id}`);
+}
+function validateCustomDate()
+{
+	if ($("customRN").value < (new Date()).toISOString().split('T')[0]) {
+		alert("Scheduled date must be in the future.");
+		$("customRN").focus();
+		return false;
+	}
+	enableSave();
 }
 function validateAndSubmit(oper) {
 	for (i = 0; i < 5; i++)
@@ -1045,6 +1059,14 @@ function cancelEdit() {
 	$("searchResults").innerHTML= sessionStorage.getItem('searchResults');
 }
 function backButton(e) {
+	clearInterval(CHrec["interval"]);				// if timer was on, turn it off
+	if (CHrec["elapsed"] > 0) {
+		if (confirm(`Saved time is ${document.gForm.TM.value}. Save updated time of ${CHrec["elapsed"]}?`)) {
+			document.gForm.TM.value = CHrec["elapsed"];
+			enableSave();
+		}
+	}
+	// alert("in backButton, metronomeStatus is " + metronomeStatus + ", elapsed is " + CHrec["elapsed"]);
 	if (metronomeStatus == "on") {
 		play();				// turn metronome off
 	}
@@ -1052,8 +1074,7 @@ function backButton(e) {
 		$("searchResults").innerHTML= sessionStorage.getItem('editScreen');
 		sessionStorage.removeItem('editScreen');
 	} else {
-		// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
 		$('chartModal').style.display = "none";
-		if (e != null) { e.preventDefault(); }	
 	}
+	if (e != null) { e.preventDefault(); }	
 }
