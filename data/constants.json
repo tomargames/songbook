@@ -35,9 +35,7 @@
     "TYP": "Set type, must be a chartSetType value",
     "BPM": "Beats per minute for metronome",
     "RES": "Type note resolution for metronome, 0 for 16th, 1 for 8th, 2 for quarter",
-    "MTR": "Describes a measure in RES units",
-    "COL": "Number of columns in chart display",
-    "ROW": "Number of rows in chart display"
+    "MTR": "Describes a measure in RES units"
   },
   "chartRowTypes": {
     "M": "chord",
@@ -72,7 +70,10 @@
     "more": "➕",
     "next": "➡️",
     "previous": "🔙",
-    "newline": "↩️"
+    "newline": "↩️",
+    "search": "🔍",
+    "timer": "⌛",
+    "stop": "🛑"
   },
   "metronomeNoteResolution": {
     "0": "Sixteenth Notes",

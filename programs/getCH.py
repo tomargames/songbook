@@ -54,14 +54,10 @@ else:
 			outrec[-1]["meta"]["bpm"] = set["meta"]["BPM"]
 			outrec[-1]["meta"]["noteRes"] = set["meta"]["RES"]
 			outrec[-1]["meta"]["meter"] = set["meta"]["MTR"]
-			outrec[-1]["meta"]["columns"] = set["meta"]["COL"]
-			outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
+			# outrec[-1]["meta"]["columns"] = set["meta"]["COL"]
+			# outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
 			outrec[-1]["meta"]["start"] = set["meta"]["start"]
 			outrec[-1]["meta"]["end"] = set["meta"]["end"]
-			for i in range(9):
-				if f"CO{i}" in set["meta"] and f"RO{i}" in set["meta"]:
-					outrec[-1]["meta"][f"CO{i}"] = set["meta"][f"CO{i}"]
-					outrec[-1]["meta"][f"RO{i}"] = set["meta"][f"RO{i}"]
 			for line in set["lines"]:
 				if line[0]['M'] != 'X':
 					outrec[-1]["lines"].append([])

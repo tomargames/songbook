@@ -305,9 +305,14 @@ class Songs(object):
 					self.tagDict[type] = {}
 					self.tagDict[type][tag] = [c]
 		# ultimately, i'd like to sort this in descending length of list
+		self.tagHover = {}
 		for type in self.tagDict:
-			for tag in self.tagDict[type]:
+			self.tagHover[type] = ''
+			for tag in sorted(self.tagDict[type]):
 				self.tagDict[type][tag] = sorted(self.tagDict[type][tag])
+				# self.tagHover[type] += f'<a class=hoverText href=javascript:doSearch("{type}{tag}")><b>{tag}</b>({len(self.tagDict[type][tag])} songs)</a>'
+				self.tagHover[type] += f'<a class=hoverlink href=javascript:doSearch("{type}{tag}")><b>{tag}</b> - {len(self.tagDict[type][tag])} songs</a><br>'
+		# utils.writeLog(self.tagHover)
 	def deckCheckBoxes(self):
 		rh = '<table border=1 class="decks"><tr>'
 		#deck checkboxes -- use copy of self.deckString
@@ -357,26 +362,24 @@ class Songs(object):
 			rh += '<select id="RA" name="RA" oninput=revAction()>'
 			rh += '<option value='f'>Options for role {self.rr}</option>' 
 			if self.rr[0] == 'O':
-				rh += '<option value="DUE">Due</option>'
-				rh += '<option value="ADD">Add card</option>'
+				rh += '<option value=''>----------ACTIONS----------</option>'
+				rh += '<option value="DUE">List Due</option>'
+				rh += '<option value="ADD">Add New Card</option>'
 				rh += '<option value="ADV">Review ahead</option>'
-				rh += '<option value="REV">Reviewed today</option>'
-				rh += '<option value="RVD">Reviewed by date</option>'
-				rh += '<option value="INA">Inactive</option>'
-				rh += '<option value="ADM">Admin</option>'
-				rh += '<option value="RPT">Data</option>'			
-				# rh += '<option value="CHD">Chord Palette</option>'
-				# rh += '<option value="SET">Settings</option>'
-				# rh += '<option value="ERR">Chart errors</option>'
+				rh += '<option value="REV">List Reviewed today</option>'
+				rh += '<option value="RVD">List Reviewed by date</option>'
+				rh += '<option value="INA">List Inactive</option>'
 				rh += '<option value="UPD">Update review history</option>'
-			rh += '<option value=''>----------Device ID----------</option>'
-			rh += '<option value="DVC">Change device</option>'
+				rh += '<option value=''>----------SETTINGS----------</option>'
+				rh += '<option value="ADM">Admin</option>'
+			rh += '<option value="SET">Preferences</option>'
 			if len(self.roleList) > 1:
 				rh += '<option value=''>----------ROLES----------</option>'
 				for r in sorted(self.roleList):
 					if r != self.rr:
 						rh += f'<option value="{r}">Change to: {r}</option>' 
 						# rh += '<option value="C{}">Copy from: {}</option>'.format(r, r)
+			rh += '<option value="RPT">Data analysis</option>'			
 			rh += '</select>'
 			rh += '<br><div id="message"></div>'
 			rh += '<br><div id="reviewTitle"></div>'
@@ -405,6 +408,16 @@ class Songs(object):
     <p id="sClose" class="close">close</p>
   </div>
 </div>
+<dialog id="settings" style="background-color: #CCC";>
+	<h2>Settings</h2>
+	<form method="dialog">
+		<p><label>Chart columns: <input type="number" min="1" max="8" id="chartColumns"></label></p>
+		<p><label>Chart rows: <input type="number" min="1" max="999" id="chartRows"></label></p>
+		<div>
+			<button id="saveSettings" value="default">Save</button>
+ 		</div>
+	</form>	
+</dialog>
 <script>
 // open media file in new window
 function showMedia(x)
@@ -659,7 +672,7 @@ categoryTitles = {
 		rec['DK'] = '0'			#setting deck to empty, so it'll automatically create changeRec
 		rec['CD'] = rec['RL'] = rec['RN'] = str(self.today)
 		rec['RA'] = rec['RT'] = 0
-		rec['NT'] = "[KEYI X, KEYO X, TYP I, PTN M, BPM 000, RES 2, MTR A, COL 3, ROW 18]"
+		rec['NT'] = "[KEYI X, KEYO X, TYP I, PTN M, BPM 000, RES 2, MTR A]"
 		return rec
 	def getSongs(self, q):
 		'''
@@ -789,10 +802,10 @@ categoryTitles = {
 		rh = '<tr>'
 		if not reviewMode:
 			title = "Sort by title"
-			rh += f'<th title="{title}"class="chartMeta sz80"><a class="chartMeta sz80" href="javascript:sortTable({0});">Title</a></th>' 		# title
+			rh += f'<th title="{title}"class="chartMeta"><a class="chartMeta" href="javascript:sortTable({0});">Title</a></th>' 		# title
 			rh += '<th hidden>Deck</th>'																	# deck (hidden)
 		else:
-			rh += f'<th class="chartMeta sz80"><a class="chartMeta sz80" href="javascript:sortTable({0});">Title</a></th>' 		# title
+			rh += f'<th class="chartMeta"><a class="chartMeta" href="javascript:sortTable({0});">Title</a></th>' 		# title
 		if self.rr[0] == "O" and not reviewMode:			# adding column for due date, RA, and RT -  add to offset
 			rh += '<th hidden>Due</th><th hidden>RA</th><th hidden>RT</th>'
 			sortOffset = 5
@@ -804,21 +817,23 @@ categoryTitles = {
 		for n, t in enumerate(self.tagOrder):
 			if reviewMode:
 				js = self.makeButton("+", f'addTag("{t}"); ', "button tagButton", f"add{n}", False, f'Add {self.config["tagCtgs"][t]["title"]} tag' )
-				rh += f'<th class="chartMeta sz80"><a class="chartMeta sz80" href="javascript:sortTable({n + sortOffset});">{self.config["tagCtgs"][t]["title"]}</a>{js}</th>' 
+				rh += f'<th class="chartMeta"><a class="chartMeta" href="javascript:sortTable({n + sortOffset});">{self.config["tagCtgs"][t]["title"]}</a>{js}</th>' 
 			else:
 				title = self.config["tagCtgs"][t]["title"]
-				rh += f'<th class="chartMeta sz80"><a title="Sort by {title}" class="chartMeta sz80" href="javascript:sortTable({n + sortOffset});">{title}</a></th>' 
+				rh += f'<th class="chartMeta"><a title="Sort by {title}" class="chartMeta" href="javascript:sortTable({n + sortOffset});">{title}</a> ' 
+				hover = f'<span class=hoverText>{self.tagHover[t]}</span>'
+				rh += f'<div class=hoverContainer>{self.constants["icons"]["search"]}{hover}</div>'
 		if not reviewMode:
 			for f in self.userFieldOrder:
 				if self.config["userFields"][f]["type"] in ["text", "txts", "date"] and not reviewMode:
 					title = self.config["userFields"][f]["title"]
-					# rh += f'<th class="chartMeta sz80"><a title="Sort by {title}" class="chartMeta sz80" href="javascript:sortTable({n + 2});">{title}</a></th>' 
-					rh += f'<th class="chartMeta sz80">{title}</th>' 
+					# rh += f'<th class="chartMeta"><a title="Sort by {title}" class="chartMeta" href="javascript:sortTable({n + 2});">{title}</a></th>' 
+					rh += f'<th class="chartMeta">{title}</th>' 
 		rh += '</tr></thead><tbody>'
 		return f"<tr>{rh}</tr>"
 	def makeButton(self, value, onclick, style, id, disabled, title):
 		# songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
-		title = f'''<span class="hoverText songInfo">{title}</span>'''
+		title = f'''<span id="{id}" class="hoverText songInfo">{title}</span>'''
 		return f'''<div class=hoverContainer><input type="button" class="{style}" value="{value}" onClick={onclick}; id="{id}" {disabled}>{title}</div>'''
 	def fieldDisplay(self, f, s):
 		if f in self.constants["fields"]:
@@ -839,13 +854,14 @@ categoryTitles = {
 		lbl = f'<label class="{style}" for="{f}"><b>{field["title"]}: </b></label>'    # type: ignore
 		fld = f'<input type="{field["type"]}" oninput=enableSave() size="30" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
 		return (lbl, fld)
-	def editField(self, f, s, style, disable = ''):
+	def editField(self, f, s, style, lngth, disable = ''):
+		# utils.writeLog(f"in editField, field is {f}, length is {lngth}")
 		field = self.getField(f)
 		if f in self.songDict[s]:
 			curVal = self.songDict[s][f]
 		else:
 			curVal = ''
-		return f'<input type="{field["type"]}" oninput=enableSave() size="50" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
+		return f'<input type="{field["type"]}" oninput=enableSave() size="{lngth}" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
 	def addDictButton(self, f):
 		js = f"addEntry('{f}'); " 
 		return self.makeButton(f'+ {self.constants["fields"][f]["title"]}', js, "tagButton", f"add{f}" , False, "Add entry<br>Labels:<br>AUDIO<br>VIDEO<br>WIKI<br>SHEET")
@@ -896,7 +912,7 @@ categoryTitles = {
 		buttons = f"<table><tr class=reviewTitle>{saveButton}{schedButton}{chartEdit}{chartButton}{pdfButton}{paletteButton}{userButtons}{historyButton}{copyButton}{importButton}{cancelButton}</tr></table>" 
 		noteDisplay = re.sub("↩️", '\\n', self.songDict[s]["NT"])
 		noteDisplay = f'<div class="reviewTitle"><hr>{self.songDict[s]["TT"]}</div><textarea class="NTinput" oninput=enableSave() rows="32" cols="80" name="NT" id="NT">{noteDisplay}</textarea>'
-		editFields = f'{buttons}<table><tr><td class=listText>{self.constants["fields"]["TT"]["title"]}:</td><td class=listText>{self.editField("TT", s, "", "")}</td>'
+		editFields = f'{buttons}<table><tr><td class=listText>{self.constants["fields"]["TT"]["title"]}:</td><td class=listText>{self.editField("TT", s, "", "50")}</td>'
 		dk = '<select id="DK" name="DK" oninput="enableSave()">'
 		for d in sorted(self.config["decks"]):
 			sel = ''
@@ -906,18 +922,8 @@ categoryTitles = {
 		dk += '</select>'
 		# editFields = f'{editFields}<td class=listText>{self.constants["fields"]["DK"]["title"]}:</td><td class=listText>{dk}</td></tr>'
 		editFields = f'{editFields}<td class=listText>{self.constants["fields"]["DK"]["title"]}:</td><td>{dk}</td></tr>'
-		# bpm = f'<input type="text" oninput=enableSave() size="5" class="listText" name="bpm" id="bpm" value="{self.songDict[s]["MT"]["bpm"]}" />'
-		# meter = f'<input type="text" oninput=enableSave() size="10" class="listText" name="meterString" id="meterString" value="{self.songDict[s]["MT"]["meterString"]}" />'
-		# noteRes = f'<select id="noteResolution" name="noteResolution" oninput="enableSave()"/>'
-		# for o in sorted(self.constants["metronomeNoteResolution"], reverse = True):
-		# 	sel = ''
-		# 	if o == self.songDict[s]["MT"]["noteResolution"]:
-		# 		sel = "selected" 
-		# 	noteRes += f'<option value="{o}" {sel}>{self.constants["metronomeNoteResolution"][o]}</option>'
-		# noteRes = f'<input type="text" oninput=enableSave() size="5" class="listText" name="noteResolution" id="noteResolution" value="{self.songDict[s]["MT"]["noteResolution"]}" />'
-		# editFields = f'{editFields}<tr><td class=listText>BPM: {bpm} </td><td><b>Resolution:</b> {noteRes}</select> <b>Accents:</b> {meter}</td></tr>'
 		for u in self.userFieldOrder:
-			editFields += f'<tr><td class=listText>{self.config["userFields"][u]["title"]}:</td><td>{self.editField(u, s, "", "")}</td>'
+			editFields += f'<tr><td class=listText>{self.config["userFields"][u]["title"]}:</td><td>{self.editField(u, s, "", "5")}</td>'
 		for f in ["LL", "SB"]:
 			editFields += f"<td>{self.addDictButton(f)}</td>"
 		editFields += f'</tr>{self.dictFieldEdit("SB", s)} {self.dictFieldEdit("LL", s)}</table>' 
@@ -1133,7 +1139,7 @@ categoryTitles = {
 			if gotOne == True:
 				tags = f'{tags}</td>'
 			else:
-				tags = f'{tags}<td class="empty"></td>'
+				tags = f'{tags}<td class="listItem"></td>'
 		TDs += '</table>'
 		# utils.writeLog(f'in displaySong with {self.songDict[s]["TT"]}, self.rr is {self.rr[0]}, reviewMode is {reviewMode}, TDs is {TDs}')
 		if self.rr[0] == "O":
@@ -1518,9 +1524,8 @@ categoryTitles = {
 						self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
 						values[1] = "M"
 					meta[keyword] = values[1]
-				elif keyword[0:2] in ["RO", "CO"] and keyword[2] in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
-					meta[keyword] = values[1]
-				else:
+				# else:
+				elif keyword not in ["COL", "ROW", "START", "CO1", "RO1"]:
 					utils.writeLog(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
 					self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
 			else:
@@ -1529,9 +1534,10 @@ categoryTitles = {
 		return (meta)
 	def getNewMetaRec(self):
 		# return default metaRecord for chart
-		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A", "COL": 2, "ROW": 20}
+		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A"}
 # s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
+# s.loadData('111111')
 # s = Songs('106932376942135580175', 'Olucas', '')
 # s = Songs('106932376942135580175', 'Othoryvo', '')
 # s = Songs('106932376942135580175', 'OmarieNme', '')
