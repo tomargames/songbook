@@ -17,7 +17,6 @@ from fpdf import FPDF
 sys.path.append("../../tomar/programs/")
 import utils
 import Users
-# import Music
 
 def renderHtml(x):
 	# for greek
@@ -408,15 +407,7 @@ class Songs(object):
     <p id="sClose" class="close">close</p>
   </div>
 </div>
-<dialog id="settings" style="background-color: #CCC";>
-	<h2>Settings</h2>
-	<form method="dialog">
-		<p><label>Chart columns: <input type="number" min="1" max="8" id="chartColumns"></label></p>
-		<p><label>Chart rows: <input type="number" min="1" max="999" id="chartRows"></label></p>
-		<div>
-			<button id="saveSettings" value="default">Save</button>
- 		</div>
-	</form>	
+<dialog id="dialog" style="background-color: #DDD";>
 </dialog>
 <script>
 // open media file in new window
@@ -515,20 +506,17 @@ categoryTitles = {
 	def configEdit(self):
 		### this will display a form that, when saved, will update the config.json file in the repository
 		print('Not coded yet, update config.json to make changes')
-	def revByDateForm(self):
-		#this will replace srchResults with an input field for a date and a submit button
-		#submit will forward form to js function revByDate which validates form and calls doSearch
-		rh = '<label for="RD1"><b>Get songs reviewed between: </b></label>'
-		rh += '<input type="date" size="10" name="RD1" id="RD1"/>'
-		rh += '<label for="RD2"><b>and: </b></label>'
-		rh += '<input type="date" size="10" name="RD2" id="RD2"/>'
-		rh += self.makeButton("Search", "revByDate(); ", 'RD', 'button pnlButton', '', 'search')
-		return rh
 	def revByDate(self, inDate):
-		#this will replace srchResults with a list of songs reviewed on a date
+		#this will replace srchResults with a list of songs reviewed in a date range
+		#2023-06-24 - make end date optional
 		#w2021-03-202021-03-20 sample query to getSongs, which calls this - 13 songs should come back
 		fromDate = inDate[0:10]
-		toDate = inDate[10:20]
+		if len(inDate) == 20:
+			toDate = inDate[10:20]
+			if toDate < fromDate:
+				toDate = fromDate
+		else:
+			toDate = fromDate
 		dateFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewDates.json')
 		with open(dateFile,'r',encoding='utf8') as u:
 			revDateDict = json.load(u)
@@ -710,8 +698,6 @@ categoryTitles = {
 			return self.updateReviewHistory()	#update reviewHistory file, no rslt
 		elif qType == 'm':
 			return self.adminEdit()		#admin.json file edit, no rslt
-		elif qType == 'v':
-			return self.revByDateForm()		#reviewed list by date, no rslt
 		elif qType == 'o':				#single song search, edit page
 			rslt = [f'{k}' ]		
 			reviewMode = True			
@@ -719,7 +705,10 @@ categoryTitles = {
 			rslt = [f'{k}' ]
 		elif qType == 'w':
 			rslt = self.revByDate(k)
-			title = f"Songs reviewed between {k[0:10]} and {k[10:]} " 
+			if len(k) == 10:
+				title = f"Songs reviewed on {k[0:10]}"
+			else:	 
+				title = f"Songs reviewed between {k[0:10]} and {k[10:]} " 
 		elif qType == 'i':					#inactive
 			rslt = []
 			title = "Inactive"
