@@ -115,7 +115,7 @@ function revAction()
 		}
 		else if (j == 'RVD')
 		{
-			doSearch("v");			//build input form for review date
+			dateRangeDialog();		// get a date range for the search
 		}
 		else if (j == 'RPT')
 		{
@@ -156,14 +156,70 @@ function revAction()
 		$("RA").value = '';
 	}
 }
-function settingsDialog() {
-	dialog = $("settings");	// build input form for user preferences
+function createInputElement(type, min, max, id, txt, value) {
+	let p = document.createElement("p");
+	let lbl = document.createElement("label");
+	let fld = document.createElement("input");
+	fld.setAttribute("type", type);
+	if (type == "number") {
+		fld.setAttribute("min", min);
+		fld.setAttribute("max", max);
+	}
+	fld.setAttribute("id", id);
+	fld.setAttribute("name", id);
+	fld.value = value;
+	lbl.textContent = txt;
+	lbl.appendChild(fld);
+	p.appendChild(lbl);
+	return p;
+}
+function dateRangeDialog()
+{
+	let dialog = buildDialog("Date range for song list");
+	let dialogForm = document.createElement("form");
+	dialogForm.method = "dialog";
+	dialog.appendChild(dialogForm);
+	let saveDialogForm = document.createElement("button");
+	saveDialogForm.className = "bgButton";
+	saveDialogForm.textContent = "Return songs reviews between those dates";
+	dialogForm.appendChild(createInputElement("date", "", "", "beginDate", "Begin: ", ""));
+	dialogForm.appendChild(createInputElement("date", "", "", "endDate", "End: ", ""));
+	dialogForm.appendChild(saveDialogForm);
+	saveDialogForm.addEventListener("click", (event) => {
+		let d1 = $("beginDate").value;
+		let d2 = $("endDate").value;
+		if (d1 == "") {
+			alert("Enter a start date for search");
+		} else {
+			doSearch("w" + d1 + d2);
+		}
+		event.preventDefault();
+		dialog.close();
+	})
 	dialog.showModal();
-	$("chartRows").value = getFromLocal("songBookRows");
-	$("chartColumns").value = getFromLocal("songBookCols");
-	$("saveSettings").addEventListener("click", (event) => {
-		let cols = ($("chartColumns").value) * 1;
-		let rows = ($("chartRows").value) * 1;
+}
+function buildDialog(headingText) {
+	let dialog = $("dialog");	
+	dialog.textContent = ""; 			// removes all previous content from dialog
+	let heading = document.createElement("h2");
+	heading.textContent = headingText;
+	dialog.appendChild(heading);
+	return dialog;
+}
+function settingsDialog() {
+	let dialog = buildDialog("Chart Settings for this Device");
+	let dialogForm = document.createElement("form");
+	dialogForm.method = "dialog";
+	dialog.appendChild(dialogForm);
+	let saveDialogForm = document.createElement("button");
+	saveDialogForm.className = "bgButton";
+	saveDialogForm.textContent = "Save and close";
+	dialogForm.appendChild(createInputElement("number", "1", "8", "chartColumns", "Chart Columns: ", getFromLocal("songBookCols")));
+	dialogForm.appendChild(createInputElement("number", "1", "999", "chartRows", "Chart Rows: ", getFromLocal("songBookRows")));
+	dialogForm.appendChild(saveDialogForm);
+	saveDialogForm.addEventListener("click", (event) => {
+		cols = ($("chartColumns").value) * 1;
+		rows = ($("chartRows").value) * 1;
 		if (cols > 0 && cols < 9) {
 			saveLocal("songBookCols", cols);
 		} else {
@@ -177,6 +233,7 @@ function settingsDialog() {
 		event.preventDefault();
 		dialog.close();
 	})
+	dialog.showModal();
 }
 function importChart()
 {
@@ -636,12 +693,18 @@ function showChartInModal()
 	cPanel.innerHTML = '';
 	let bottomTable = newBorderedTable();
 	cPanel.appendChild(bottomTable);
-	row = bottomTable.insertRow();
+	let row = bottomTable.insertRow();
 	addTDtoTR(createMetronomeDiv("bottomDiv", 1), row);
-	addTDtoTR(createButton("timerButton", "chartButton", startTimer, "⌛", "start timer"), row);
-	addTDtoTR(timerDisplay(0), row, "clock");
 	if (CHrec["sets"][0]["meta"]["bpm"] != "000") {
 		addTDtoTR(createButton("tempoButton", "chartButton", playMetronome, "🥁", "start metronome"), row);
+	}
+	if (CHrec["fresh"] == "Y") {
+		let timerTable = document.createElement("table");
+		let timerRow = timerTable.insertRow();
+		addTDtoTR(createButton("timerButton", "chartButton", startTimer, "⌛", "start timer"), timerRow);
+		let secs = (isNaN(document.gForm.TM.value)) ? 0 : document.gForm.TM.value;
+		addTDtoTR(timerDisplay(secs), timerRow, "clock");
+		addTDtoTR(timerTable, row);
 	}
 	addTDtoTR(createButton("prevButton", "chartButton", displayPrevChartPage, "🔙", "previous page"), row);
 	addTDtoTR(createButton("nextButton", "chartButton", displayNextChartPage, "➡️", "next page"), row);
@@ -887,17 +950,6 @@ function validateAndSubmit(oper) {
 	document.gForm.oper.value = oper;
 	document.gForm.RN.value = RN.value;
 	document.gForm.submit();
-}
-function revByDate()
-{
-	let d1 = $("RD1").value;
-	let d2 = $("RD2").value;
-	if (d2 < d1)
-	{
-		d2 = d1;
-	}
-	//alert("input is w" + d1 + d2);
-	doSearch("w" + d1 + d2);
 }
 function saveAdminFile()
 {
