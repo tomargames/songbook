@@ -105,12 +105,14 @@ table
   font-size: .7em;
   height: .8em;
   padding: 5px;
+  text-align: center;
 }
 .listText
 {
 	color: black;
   font-weight: bold;
-  font-size: .9em;
+  font-size: 1em;
+  padding: 5px;
 }
 .listItem
 {
@@ -167,7 +169,7 @@ table
 .reviewTitle
 {
   color: darkslateblue;
-  background-color: #ddd;
+  background-color: #eee;
   font-size: 2em;
   font-weight: bold;
 }
@@ -197,9 +199,15 @@ table
 }
 .pnlButton
 {
-  background-color:azure;
+  background-color:lavender;
   color: black;
-  font-size: 0.6em;
+  font-size: 0.8em;
+}
+.editButton
+{
+  background-color:lavender;
+  color: black;
+  font-size: 1.2em;
 }
 .chartButton
 {
@@ -229,12 +237,13 @@ table
 }
 .songDetail
 {
-  background-color: #EEE;
   color: #000;
   text-align: left;
+  vertical-align: top;
 	padding: 2px;
 	font-size: 1em;
 	font-weight: bold;
+  border: 1px solid #000;
 }
 .songDetail.header
 {
@@ -261,6 +270,7 @@ table
 .bgButton
 {
 	background-color: #ccc;
+  font-size: .8em;
 }
 /* Tooltip container */
 .hoverContainer {
@@ -274,8 +284,8 @@ table
   width: 360px;
   background-color: #777;
   color: #FFF;
-  text-align: center;
-  padding: 5px 0;
+  text-align: left;
+  padding: 5px 7px;
   border-radius: 6px;
    /* Position the tooltip text - see examples below! */
   position: absolute;
@@ -287,7 +297,7 @@ table
   width: 200px;
   text-align: left;
   padding: 10;
-  font-size: 20px;
+  font-size: .8em;
 }
 .hoverlink {
   font-size: 16px;
