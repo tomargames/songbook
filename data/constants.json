@@ -10,7 +10,6 @@
     "RT": {"title": "Reviews", "type": "text", "sec": "O"},
     "CS": {"title": "ChartStatus", "type": "text", "sec": "O"},
     "NT": {"title": "Chart", "type": "text", "sec": "O"},
-    "MT": {"title": "Metronome", "type": "dict", "sec": "O"},
     "CD": {"title": "Created", "type": "date", "sec": "O"}
     },
   "roles": {
@@ -46,13 +45,6 @@
     "T": "text"
   },
   "chartRowSequence": "123MBT",
-  "chartErrorTypes": {
-    "err1": "chord not found",
-    "err2": "chart not coded, default",
-    "err3": "no metadata on first line",
-    "err4": "nothing at all in NT",
-    "err5": "unknown as yet"
-  },
   "icons": {
     "chart": "📈",
     "edit": "📝",
@@ -73,7 +65,8 @@
     "newline": "↩️",
     "search": "🔍",
     "timer": "⌛",
-    "stop": "🛑"
+    "stop": "🛑",
+    "save": "💾"
   },
   "metronomeNoteResolution": {
     "0": "Sixteenth Notes",

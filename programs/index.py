@@ -36,7 +36,6 @@ gImg = form.getvalue('gImage', '')	#remove default
 oper = form.getvalue('oper','')
 decks = form.getvalue('decks','')
 rr = form.getvalue('rr','')
-device = form.getvalue('device','')
 
 # if there's a repository coming in, put it in the title
 if len(rr) > 1:
@@ -72,7 +71,6 @@ print(f'''
 <input type="hidden" name="oper" value="">
 <input type="hidden" name="decks" value="{decks}">
 <input type="hidden" name="rr" value="{rr}">
-<input type="hidden" name="device" value="{device}">
 <input type="hidden" name="RL" value="{str(datetime.date.today())}">
 ''')											#</form is left off, so song input can be added to form
 # utils.writeLog(f"index.py, rr is {rr}, dd is {decks}, device is {device}")
@@ -85,7 +83,6 @@ if rr == '':									# if first time in, get from cookie
 			{
 				document.gForm.decks.value = dd;
 				document.gForm.rr.value = rr;
-				document.gForm.device.value = "0";
 				document.gForm.submit();
 			}
 		</script>''')
@@ -110,9 +107,7 @@ else:
 			# utils.writeLog(f'index.py: oper is {oper}')
 			if oper > '': 
 				RN = form.getvalue('RN','')
-				if type(RN) is list:
-					RN = RN[-1]
-					utils.writeLog(f"ERROR coming in to index.py for E, song is {s}, RN from form is {form.getvalue('RN','')}, RN is reset to {RN}")
+				# utils.writeLog(f"index.py: RN from form is {RN}, type is {type(RN)}, RN[0] is {RN[0]}");
 				if oper[0] in ['C', 'E']:
 					#collect all the input and send it to sb.processInput()
 					changeRec = sb.newChangeRec()
@@ -149,7 +144,7 @@ else:
 									# will be [=, key, oldvalue, newvalue]
 									changeRec[f].append(("=", i, sb.songDict[s][f][i], fieldValue))
 					# 6 instances of TYP LBL VAL and TAG
-					for i in range(6):
+					for i in range(7):
 						newTag = form.getvalue(f'TAG{i}', '')
 						if newTag > '':
 							changeRec["TG"].append(("+", newTag))
@@ -159,6 +154,7 @@ else:
 							val = form.getvalue(f'VAL{i}', '')
 							changeRec[typ].append(("+", lbl, val))
 					for f in ['TT', 'DK'] + list(sb.config["userFields"]):
+						# utils.writeLog(f"in index.py, f is {f}, value is {form.getvalue(f, '')}")
 						val = form.getvalue(f,'')
 						if sb.songDict[s][f] != val:
 							changeRec[f].append(sb.songDict[s][f])
@@ -172,18 +168,23 @@ else:
 				elif oper[0] == 'S':
 					# utils.writeLog(f"index.py: just before reviewOnly with {form.getvalue('RN','')}, {form.getvalue('RL','')}, and {form.getvalue('RrevNote','')}")
 					# utils.writeLog(f"index.py for S, song is {s}, RL is {form.getvalue('RL','')}, RN is {form.getvalue('RN',''), }")
+					revNote = form.getvalue('revNote', '')
+					if type(RN) is list:
+						RN = RN[0]
+					if type(revNote) is list:
+						revNote = revNote[0]
 					try:
-						rev = sb.reviewOnly(oper, form.getvalue('RN',''), form.getvalue('RL',''), form.getvalue('revNote', ''))	
+						rev = sb.reviewOnly(oper, RN, form.getvalue('RL',''), revNote)	
 					except Exception as e:
 						print(f'error writing review record: {e}')
 				#response will send stuff back, then
 				sb = Songs.Songs(gid, rr, decks)
-				print(sb.jsFunctions(device))
+				print(sb.jsFunctions())
 				# utils.writeLog(f"rev={rev}")
 				# put the message in the message area
 				renderHtml(f"<script>document.getElementById('message').innerHTML = '<div class=message>{rev}</div>'; </script>")
 			else:
-				print(sb.jsFunctions(device))
+				print(sb.jsFunctions())
 		print('</div>')
 	else:
 		print('''
