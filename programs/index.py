@@ -126,20 +126,18 @@ else:
 					# otherwise, this is an edit to an existing song
 					# utils.writeLog(f"index.py for E, song is {s}, RN is {form.getvalue('RN','')}, RN is {RN}")
 					for t in sb.songDict[s]["TG"]:
-						fieldName = f'del{t}'
-						if form.getvalue(fieldName) == "delete":
+						if form.getvalue(f'del{t}') == "on":
 							changeRec["TG"].append(("-", t))
 					for f in ['LL', 'SB']:
 						# process deletes, edits, and possible adds to LL and then do it again for SB
 						# check if any are to be deleted or have changed, and put them in changeRec
 						for i in sb.songDict[s][f]:
-							fieldName = f'del{f}{i}'
-							if form.getvalue(fieldName) == "delete":
+							# utils.writeLog(f"looking for field del{f}{i}, value {form.getvalue(f'del{f}{i}', '')}")
+							if form.getvalue(f'del{f}{i}') == "delete":
 								changeRec[f].append(("-", i, sb.songDict[s][f][i]))
 							else:
 								#check to see if value has been changed
-								fieldName = f'{f}{i}'
-								fieldValue = form.getvalue(fieldName, '')
+								fieldValue = form.getvalue(f'{f}{i}', '')
 								if sb.songDict[s][f][i] != fieldValue:
 									# will be [=, key, oldvalue, newvalue]
 									changeRec[f].append(("=", i, sb.songDict[s][f][i], fieldValue))

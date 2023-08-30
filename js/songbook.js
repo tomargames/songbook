@@ -34,34 +34,6 @@ function doClear()
 	$("searchBox").value = '';
 	// $("searchBox").focus();		// commenting out on 3/7 
 }
-function populateUser()
-{
-	// called by adminEdit page
-	//alert("user is " + $("user").value);
-	var id = ($("user").value).slice(0,21);
-	var nm = ($("user").value).slice(21,42);
-	var im = ($("user").value).slice(42);
-	//alert("name is " + nm + ", id is " + id + ", im is " + im);
-	for (i = 0; i < 5; i++)
-	{
-		//alert("in loop " + i + ", disabled is " + $("id" + i).disabled);
-		if ($("id" + i).disabled == true)
-		{
-			$("id" + i).disabled = false;
-			$("id" + i).value = id;
-			$("pic" + i).innerHTML = 
-				'<img width="60" height="60" src="' + im + '">';
-			$("nam" + i).innerHTML = 
-				nm.trim() + '<br>' + id;
-			$("Owner" + i).innerHTML = 
-'Owner: <input class="admin" onchange="enableAdminSaveButton();" type="checkbox" id="c' + id + 'O">';
-			$("User" + i).innerHTML = 
-'User: <input class="admin" onchange="enableAdminSaveButton();" type="checkbox" id="c' + id + 'U">';
-			break;
-		}
-	}
-	// find out which of the blank lines can be activated, activate and populate it
-}
 function enableAdminSaveButton()
 {
 	$("adminsave1").disabled = false;
@@ -69,20 +41,20 @@ function enableAdminSaveButton()
 	$("adminsave2").disabled = false;
 	$("adminsave2").style.backgroundColor = "lightgreen";
 }
-// function reviewNote(today)
-// {
-// 	document.gForm.RL.value = today;
-// 	enableSave();
-// }
 function enableSave(e)
 {
 	$("saveButton").disabled = false;
 	$("saveButton").style.backgroundColor="lightgreen";
+	if (SBlist["title"] == "edit") {
+		schedB = $(`sched${Object.keys(SBlist["songs"])[0]}`);
+		schedB.style.backgroundColor = "lavender";
+		// schedB.disabled = true;
+	}
 }
 function addEntry(n)
 {
 	var titles = {"LL": "URL", "SB": "file name"};
-	for (i = 0; i < 6; i++)
+	for (i = 0; i < 7; i++)
 	{
 		if ($("TYP" + i).disabled == true)
 		{
@@ -133,7 +105,7 @@ function revAction()
 		}
 		else if (j == 'ADM')
 		{
-			doSearch("m");			//build input form for admin settings
+			execSearch("m", "A");			//build input form for admin settings
 		}
 		else if (j == 'SET')
 		{
@@ -145,7 +117,7 @@ function revAction()
 		}
 		else if (j == 'UPD')
 		{
-			execSearch("u", true);			// update reviewHistory, put result in message area
+			execSearch("u", "P");			// update reviewHistory, put result in message area
 		}
 		else
 		{
@@ -188,17 +160,11 @@ function createInputElement(type, min, max, id, txt, value) {
 }
 function dateRangeDialog()
 {
-	let dialog = buildDialog("Date range for song list");
-	let dialogForm = document.createElement("form");
-	dialogForm.method = "dialog";
-	dialog.appendChild(dialogForm);
-	let saveDialogForm = document.createElement("button");
-	saveDialogForm.className = "bgButton";
-	saveDialogForm.textContent = "Return songs reviews between those dates";
-	dialogForm.appendChild(createInputElement("date", "", "", "beginDate", "Begin", ""));
-	dialogForm.appendChild(createInputElement("date", "", "", "endDate", "End", ""));
-	dialogForm.appendChild(saveDialogForm);
-	saveDialogForm.addEventListener("click", (event) => {
+	let dialog = buildDialog("Date range for song list", "Get songs");
+	let form = dialog.childNodes[1];
+	form.appendChild(createInputElement("date", "", "", "beginDate", "Begin", ""));
+	form.appendChild(createInputElement("date", "", "", "endDate", "End", ""));
+	form.childNodes[0].addEventListener("click", (event) => {
 		let d1 = $("beginDate").value;
 		let d2 = $("endDate").value;
 		if (d1 == "") {
@@ -211,29 +177,34 @@ function dateRangeDialog()
 	})
 	dialog.showModal();
 }
-function buildDialog(headingText) {
+function buildDialog(headingText, saveButtonText) {
 	let dialog = $("dialog");	
 	dialog.textContent = ""; 			// removes all previous content from dialog
 	let heading = document.createElement("h2");
 	heading.textContent = headingText;
 	dialog.appendChild(heading);
-	return dialog;
-}
-function settingsDialog() {
-	let dialog = buildDialog("Chart Settings for this Device");
 	let dialogForm = document.createElement("form");
 	dialogForm.method = "dialog";
 	dialog.appendChild(dialogForm);
 	let saveDialogForm = document.createElement("button");
-	saveDialogForm.className = "bgButton";
-	saveDialogForm.textContent = "Save and close";
-	dialogForm.appendChild(createInputElement("number", "1", "8", "chartColumns", "Chart Columns", getFromLocal("songBookCols")));
-	dialogForm.appendChild(createInputElement("number", "1", "999", "chartRows", "Chart Rows", getFromLocal("songBookRows")));
-	if (SBdata["role"] == "O") {
-		dialogForm.appendChild(createInputElement("number", "0", "9999", "dueRange", "Maximum Days Overdue", getFromLocal("songBookDueRange")));
-	}
 	dialogForm.appendChild(saveDialogForm);
-	saveDialogForm.addEventListener("click", (event) => {
+	saveDialogForm.id = "saveButton";
+	saveDialogForm.className = "pnlButton";
+	saveDialogForm.style.width = "80px";
+	saveDialogForm.style.height = "40px";
+	saveDialogForm.style.backgroundColor = "lightgreen";
+	saveDialogForm.textContent = saveButtonText;
+	return dialog;
+}
+function settingsDialog() {
+	let dialog = buildDialog("Chart Settings for this Device", "Save Settings");
+	let form = dialog.childNodes[1];
+	form.appendChild(createInputElement("number", "1", "8", "chartColumns", "Chart Columns", getFromLocal("songBookCols")));
+	form.appendChild(createInputElement("number", "1", "999", "chartRows", "Chart Rows", getFromLocal("songBookRows")));
+	if (SBdata["role"] == "O") {
+		form.appendChild(createInputElement("number", "0", "9999", "dueRange", "Maximum Days Overdue", getFromLocal("songBookDueRange")));
+	}
+	form.childNodes[0].addEventListener("click", (event) => {
 		let cols = ($("chartColumns").value) * 1;
 		let rows = ($("chartRows").value) * 1;
 		let dueRange = ($("dueRange").value) * 1;
@@ -339,7 +310,9 @@ function createButton(id, className, functionName, label, hover, image=false, di
 	if (disabled == true) {
 		button.disabled = true;
 	}
-	button.addEventListener("click", functionName); 
+	 button.addEventListener("click", functionName); 
+	// button.setAttribute("onclick", `${functionName}(event, this)`);
+	// button.setAttribute("onclick", `${functionName}(${id})`);
 	button.className = className;
 	button.id = id;
 	button.name = id;
@@ -889,7 +862,6 @@ function scheduleAndSave(days, songId)
 	let dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + days);
 	$("RN").disabled = false;
-	// $("RN").value = document.gForm.RN.value = dueDate.toISOString().substring(0, 10);
 	$("RN").value = dueDate.toISOString().substring(0, 10);
 	document.gForm.oper.value = "S" + songId;
 	document.gForm.submit();
@@ -976,7 +948,7 @@ function validateAndSubmit(oper) {
 	}
 	$("RN").disabled = false;
 	let RN = $("customRN");
-	if (RN.value < (new Date()).toISOString().split('T')[0]) {
+	if (RN.value <= (new Date()).toISOString().split('T')[0]) {
 		if (!(confirm("Save without scheduling?"))) {
 			RN.focus();
 			return false;
@@ -1001,37 +973,26 @@ function saveAdminFile()
 		if (this.readyState == 4 && this.status == 200) 
 		{
 			$("message").innerHTML = this.responseText;
-			$("adminsave").disabled = true;
-			$("adminsave").style.backgroundColor = "gray";
 		}
 	};
-	// get checkboxes by class="admin" 
-	var checkBoxes = document.getElementsByClassName("admin");
-	var i;
-	var counter = 0;
-	var ids = new Array();
-	var owners = 0;
-	for (i = 0; i < checkBoxes.length; i++)
-	{
-		if (checkBoxes[i].checked == true)
-		{
-			var x = checkBoxes[i].id;
-			x = x.slice(1);
-			counter = ids.push(x);
-			if (x.slice(-1) == "O")
-			{
-				owners += 1;
-			}
-		}
+	let checkBoxes = document.getElementsByTagName("input");
+	let owners = 0;
+	let sendString = '';
+	for (let i = 0; i < checkBoxes.length; i++) {
+		// console.log(checkBoxes[i]);
+		if (checkBoxes[i].id > '') {
+			if (checkBoxes[i].id.substring(0, 1) == "c" && checkBoxes[i].id.length == 23) {
+				if (checkBoxes[i].checked == true) {
+					sendString = `${sendString}${checkBoxes[i].id.substring(1)}`;
+					if (checkBoxes[i].id.charAt(checkBoxes[i].id.length - 1) == "O") {
+						owners += 1;
+					}  
+				}
+			} 
+		} 
 	}
 	if (owners > 0)
 	{
-		sendString = ''
-		for (i = 0; i < counter; i++)
-		{
-			sendString += ids[i];
-		}
-		//alert('sendString is ' + sendString);
 		let g = document.gForm.gId.value;
 		let d = document.gForm.decks.value;
 		let r = document.gForm.rr.value;
@@ -1159,6 +1120,7 @@ function detailHeaderRow(tbl) {
 	});
 }
 function detailLinkTD(txt, href, hoverText, row) {
+	// console.log(`in detailLinkTD, txt is ${txt}, href is ${href}`);
 	let elem = document.createElement("td")
 	elem.className = "songDetail";
 	elem.style.border = "1px solid #000";
@@ -1173,14 +1135,16 @@ function detailLinkTD(txt, href, hoverText, row) {
 	div.appendChild(makeHoverSpan(hoverText));
 	elem.appendChild(div);
 	row.appendChild(elem);
+	return lnk;
 }
 function songAction(e) {
-	// alert ("got here, target is " + e.target.id);
 	let songId = e.target.id.substring(5, 8);
 	let type = e.target.id.substring(0, 5);
+	// alert (`songAction: type: got here, type is ${type}, songId is ${songId}`);
 	if (type == "sched") {
 		showDetail(songId);
 	} else if (type == "lchrt") {
+		$(`title${songId}`).style.backgroundColor = "goldenrod";			// highlight the title of the song for when you come back
 		showChart(`NN${songId}`);
 	} else if (type == "fchrt") {
 		showChart(`YN${songId}`);
@@ -1200,6 +1164,8 @@ function songAction(e) {
 		cancelEdit();
 	} else if (type == "histo") {
 		showHistory(songId);
+	} else if (type == "add  ") {
+		addEntry(songId);
 	} 
 	if (e != null) { e.preventDefault(); }	
 }
@@ -1272,10 +1238,15 @@ function detailLine(rec, tbl) {
 		}	
 		let r = tableArray[0].insertRow();
 		addTDtoTRtext(SBdata["constants"]["fields"][item]["title"], r, "songDetail");
-		addTDtoTRtext(SBlist["songs"][rec][item], r, "songDetail");
+		if (item != "RL") {
+			addTDtoTRtext(SBlist["songs"][rec][item], r, "songDetail");
+		} else {
+			addTDtoTRtext(getElapsedDays(SBlist["songs"][rec][item], 0)["text"], r, "songDetail");
+		}
 	});
 	if (SBlist["title"] != "edit") {
-		detailLinkTD(SBlist["songs"][rec]["TT"], js, hoverInfo, row);
+		let lnk = detailLinkTD(SBlist["songs"][rec]["TT"], js, hoverInfo, row);
+		lnk.id = `title${rec}`;
 		addHiddenTD(row, SBlist["songs"][rec]["DK"]);
 		// action bar
 		let actionBar = createDiv("actionBar", "actions");
@@ -1304,6 +1275,7 @@ function detailLine(rec, tbl) {
 	}
 	SBdata["config"]["tagOrder"].forEach((item, index) => {
 		let moreCount = 0;
+		let firstTag = "";
 		hover = tdText = "";
 		if (SBlist["title"] == "edit") {
 			tdText = document.createElement("td");		
@@ -1318,6 +1290,7 @@ function detailLine(rec, tbl) {
 					hover = `${hover}${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)<br>`;
 					if (tdText == "") {
 						tdText = tag.substring(1);
+						firstTag = tag;
 					} else {
 						moreCount += 1;
 					}
@@ -1342,7 +1315,11 @@ function detailLine(rec, tbl) {
 			if (moreCount > 0) {
 				tdText = `${tdText} (+${moreCount})`;
 			}
-			detailLinkTD(tdText, "", hover, row);	
+			let lnk = document.createElement("a");
+			lnk.className = "listItem";
+			lnk.href = `javascript:doSearch('${firstTag}')`;
+			lnk.text = firstTag.substring(1);
+			detailLinkTD(tdText, `javascript:doSearch('${firstTag}')`, hover, row);	
 		} else {
 			row.appendChild(tdText);
 		}
@@ -1360,11 +1337,13 @@ function detailLine(rec, tbl) {
 		dueDate.className = "songDetail";
 		dueDate = addTDtoTRnode(dueDate, r);
 		dueDate.setAttribute("colspan", 2);
+		SBlist["songs"][rec]["elapsed"] = getElapsedDays(SBlist["songs"][rec]["RL"], 0)["value"];
+		SBlist["songs"][rec]["origSched"] = getElapsedDays(SBlist["songs"][rec]["RL"], SBlist["songs"][rec]["RN"])["value"];
 		SBdata["config"]["reviewOptions"].forEach ((item, index) => {
 			if (index % 2 == 0) {
 				r = tableArray[2].insertRow();
 			}
-			addTDtoTRnode(createButton(`b${item[1]}`, "songDetail", songAction, item[0], "hover"), r);
+			addTDtoTRnode(createButton(`b${item[1]}`, "songDetail", songAction, item[0], getFutureDate(item[1])), r);
 		});
 		r = tableArray[2].insertRow();
 		let revNote = createInputElement("text", 0, 32, "revNote", "Review Note", "");
@@ -1378,7 +1357,7 @@ function detailLine(rec, tbl) {
 	td.appendChild(detailTable);
 	row.appendChild(td);
 }
-function execSearch(s, upd = false)
+function execSearch(s, typ = "L")
 {
 	// alert('in execSearch with ' + s);
 	if (s.substring(0,1) == "o") {					// this is going to the edit screen, save songList and songDetail
@@ -1389,14 +1368,45 @@ function execSearch(s, upd = false)
 	xhttp.onreadystatechange = function() 
 	{
  		if (this.readyState == 4 && this.status == 200) {
-			if (upd == false) {
-				SBlist = JSON.parse(this.responseText);
-				displaySong();
-			}
-			else
-			{
+			if (typ == "P") {				// list of songs
 				$("message").innerHTML = this.responseText;
-			}
+			} else {
+				SBlist = JSON.parse(this.responseText);
+				if (typ == "L") { 	// results of a process
+					displaySong();
+				} else {	// admin page (typ == "A")
+					SBlist["title"] = "admin";
+					let dialog = buildDialog (`Admin for ${SBdata["repository"]}`, "Save changes");
+					dialog.childNodes[0].disabled = true;
+					let form = dialog.childNodes[1];
+					let userTable = newBorderedTable();
+					form.appendChild(userTable);
+					(Object.keys(SBlist["users"])).forEach((item) => {
+						let row = userTable.insertRow();
+						// profile picture
+						let td = document.createElement("img");
+						td.height = td.width = "32";
+						td.src = SBlist["users"][item]["I"];
+						addTDtoTRnode(td, row, "songDetail");	
+						addTDtoTRtext(SBlist["users"][item]["N"], row, "songDetail");	
+						addTDtoTRnode(createInputElement("checkbox", 0, 0, `c${item}O`, "Owner"), row, "songDetail");
+						addTDtoTRnode(createInputElement("checkbox", 0, 0, `c${item}U`, "User"), row, "songDetail");
+						["O", "U"].forEach((type) => {
+							if (SBlist["admin"][type].includes(item)) {
+								$(`c${item}${type}`).checked = true;
+							}
+							enableES($(`c${item}${type}`));
+						});
+					});
+					form.childNodes[0].addEventListener("click", (event) => {
+						// something goes here
+						saveAdminFile();
+						event.preventDefault();
+						dialog.close();
+					})
+					dialog.showModal();
+				}
+			} 
 			doClear();
 		}
 	};
@@ -1407,6 +1417,33 @@ function execSearch(s, upd = false)
 	xhttp.open("POST", "srchResults.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r, true);
 	xhttp.send();
 }
+function getElapsedDays(date1, date2) {
+	let revDate;
+	let lastDate = new Date(date1);
+	if (date2 == 0) {
+		revDate = new Date();
+	} else {
+		revDate = new Date(date2);
+	}
+	let daysElapsed = Math.floor((revDate.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000));
+	let returnObj = {};
+	returnObj["value"] = daysElapsed;
+	returnObj["text"] = `${date1}, ${daysElapsed} days`;
+	if (daysElapsed > 364) {
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/365).toFixed(2)} years`;
+	} else if (daysElapsed > 29) {
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/30).toFixed(2)} months`;
+	} else if (daysElapsed > 6) {
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/7).toFixed(2)} weeks`;
+	}
+	return returnObj;
+}
+function getFutureDate(daysToAdd) {
+	let newDate = new Date();
+	newDate.setDate(newDate.getDate() + daysToAdd);
+	return `${daysToAdd} days, schedule on ${newDate.toISOString().substring(0, 10)}`;
+}
+
 function displaySong() {
 	let srchResults = $("searchResults");
 	srchResults.innerHTML = "";
@@ -1460,8 +1497,9 @@ function displaySong() {
 		// action bar will not include chord palate or import chart, for the moment
 		actionBar.appendChild(createButton("saveButton", "editButton", songAction, SBdata["constants"]["icons"]["save"], "Save changes", false, true));
 		actionBar.appendChild(createButton(`sched${songId}`, "editButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule with buttons`));
+		$(`sched${songId}`).style.backgroundColor = 'lightgreen';
+		actionBar.appendChild(createButton(`fchrt${songId}`, "editButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart from input`));
 		if (rec["CS"] < 2) {
-			actionBar.appendChild(createButton(`fchrt${songId}`, "editButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart from input`));
 			actionBar.appendChild(createButton(`pdf  ${songId}`, "editButton", songAction, "pdf", `PDF of chart for ${songId}`, true));
 		}
 		(Object.keys(rec["SB"])).forEach ((name) => {
@@ -1523,7 +1561,7 @@ function displaySong() {
 		});
 		let hover = "Add entry<br>Labels:<br>AUDIO<br>VIDEO<br>WIKI<br>SHEET";
 		["LL", "SB"].forEach((item) => {
-			userFields.appendChild(createButton(`add${item}`, "tagButton", songAction, `+${SBdata["constants"]["fields"][item]["title"]}`, hover));
+			userFields.appendChild(createButton(`add  ${item}`, "tagButton", songAction, `+${SBdata["constants"]["fields"][item]["title"]}`, hover));
 		});
 		let rowColor = "#EEE";
 		["LL", "SB"].forEach((field) => {
@@ -1572,7 +1610,11 @@ function displaySong() {
 		["RL", "CD", "RT", "RA", "CS"].forEach((item) => {
 			infoRow = infoTable.insertRow();
 			addTDtoTRtext(`${SBdata["constants"]["fields"][item]["title"]}: `, infoRow, "songDetail");
-			addTDtoTRtext(rec[item], infoRow, "songDetail");
+			if (item != "RL") {
+				addTDtoTRtext(rec[item], infoRow, "songDetail");
+			} else {
+				addTDtoTRtext(getElapsedDays(rec[item], 0)["text"], infoRow, "songDetail");
+			}
 		});
 		let revNote = createInputElement("text", 0, 32, "revNote", "Review Note", "");
 		revNote.className = "songDetail";
@@ -1662,9 +1704,13 @@ function showDetail(songId) {
 	modal.style.display = "block";
 	if (SBdata["role"] == "O") {
 		SBdata["config"]["reviewOptions"].forEach ((item) => {
-			$(`b${item[1]}`).addEventListener("click", (event) => {
+			let btn = $(`b${item[1]}`);
+			btn.addEventListener("click", (event) => {
 				scheduleAndSave(item[1], songId);
 			});
+			if (item[1] == SBlist["songs"][songId]["elapsed"] || item[1] == SBlist["songs"][songId]["origSched"]) {
+				btn.style.backgroundColor = "goldenrod";
+			}
 		});
 	}
 }
@@ -1676,7 +1722,8 @@ function cancelEdit() {
 			}
 		}
 	}
-	$("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+	// $("searchResults").innerHTML= sessionStorage.getItem('searchResults');
+	doSearch('x' + formatNumber(getFromLocal("songBookDueRange"), 4));					// songs that are due as of today minus dueRange
 }
 function backButton(e) {
 	clearInterval(CHrec["interval"]);				// if timer was on, turn it off
