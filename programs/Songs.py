@@ -579,59 +579,14 @@ function getDataList()
 			rh += f'<tr><td>{d}</td><td>{cr}</td><td>{note}</td></tr>'  
 		rh += '</table>'
 		return rh
-	def adminRow(self, u):
-		#if u is a number, it's for a blank disabled row
-		rh = '<tr>'
-		if type(u) == str:
-			rh += f'<td><img width=60 height=60 src={self.appUsers[u]["I"]}></td>' 
-			rh += f'<td>{self.appUsers[u]["N"]}<br>{u}</td>' 
-		else:
-			rh += f'''
-<input type="hidden" oninput=enableAdminSaveButton() name="id{u}" id="id{u}" disabled/>
-				'''
-			rh += f'<td id="pic{u}"></td>' 
-			rh += f'<td id="nam{u}"></td>' 
-		for r in sorted(self.constants["roles"]):
-			if type(u) == str and u in self.reposDict[self.rr[1:]][r]:
-				ch = "checked"
-			else:
-				ch = ''
-			if type(u) == str:
-				rh += f'<td>{self.constants["roles"][r]}<input class="admin" onchange="enableAdminSaveButton();" type="checkbox" id="c{u}{r}" {ch}></td>' 
-			else:
-				rh += f'<td id="{self.constants["roles"][r]}{u}"></td>' 
-		rh += '</tr>'
-		return rh
 	def adminEdit(self):
 		# add and edit users from list of tomar users
-		rh = '<input type="button" style="color:white; background-color:gray;" value="Save" onclick="saveAdminFile();" id="adminsave1" disabled>'
-		rh += '<table border="1">'
-		# spin through all tomar users that have songbook enabled
-		# if they don't already have a role in this repository, add them to dropDownUsers
-		dropDownUsers = {}
+		rd = {}
+		rd["admin"] = self.reposDict[self.rr[1:]]
+		rd["users"] = {}
 		for u in sorted(self.appUsers):
-			found = False
-			for r in sorted(self.constants["roles"]):
-				if u in self.reposDict[self.rr[1:]][r]:
-					found = True
-			if found == False:
-				dropDownUsers[u] = self.appUsers[u]
-			else:
-				rh += self.adminRow(u)
- 		# make 5 blank named lines under the ones you print below
-		for i in range(5):
-			rh += self.adminRow(i)			#input will be disabled and other fields blank on these rows
-		rh += '</table>'
-		rh += '<select id="user" name="user" oninput="populateUser()">'
-		rh += '<option>Select user to add</option>'
-		for u in sorted(dropDownUsers):
-			#pad out to fixed-length for parsing in populateUser()
-			userInfo = f'{u}{dropDownUsers[u]["N"]}                                      ' [0:42]
-			userInfo = f'{userInfo}{dropDownUsers[u]["I"]}' 
-			rh += f'<option value="{userInfo}">{dropDownUsers[u]["N"]}</option>' 
-		rh += '</select>'
-		rh += '<br><input type="button" style="color:white; background-color:gray;" value="Save" onclick="saveAdminFile();" id="adminsave1" disabled>'
-		return rh
+			rd["users"][u] = self.appUsers[u]
+		return json.dumps(rd)
 	def sortByTitle(self, L):
 		# L is list of song keys coming in, outL will be returned
 		sL = []
@@ -754,7 +709,7 @@ function getDataList()
 				if self.songDict[s]["RN"] > str(self.today) and self.songDict[s]["RN"] <= newDate:
 					rslt.append(s)
 		else:
-			title = f"Songs with tag {k}: " 
+			title = f"Songs with tag {self.config['tagCtgs'][qType]['title']}: {k}: " 
 			rslt = self.sortByTitle(self.tagDict[qType][k])		#tag search
 		resultSet = {}
 		resultSet["songs"] = {}
@@ -775,39 +730,6 @@ function getDataList()
 		else:
 			resultSet["title"] = "edit"
 		return json.dumps(resultSet)
-	# def detailHeader(self, reviewMode):
-	# 	rh = '<tr>'
-	# 	if not reviewMode:
-	# 		title = "Sort by title"
-	# 		rh += f'<th title="{title}"class="chartMeta"><a class="chartMeta" href="javascript:sortTable({0});">Title</a></th>' 		# title
-	# 		rh += '<th hidden>Deck</th>'																	# deck (hidden)
-	# 	else:
-	# 		rh += f'<th class="chartMeta"><a class="chartMeta" href="javascript:sortTable({0});">Title</a></th>' 		# title
-	# 	if self.rr[0] == "O" and not reviewMode:			# adding column for due date, RA, and RT -  add to offset
-	# 		rh += '<th hidden>Due</th><th hidden>RA</th><th hidden>RT</th>'
-	# 		sortOffset = 5
-	# 	else:
-	# 		sortOffset = 2				# title, deck, and chart go before first tag
-	# 	if not reviewMode:
-	# 		rh += f'<th class="chartMeta">{self.constants["icons"]["info"]}</th>'
-	# 	n = 0
-	# 	for n, t in enumerate(self.config["tagOrder"]):
-	# 		if reviewMode:
-	# 			js = self.makeButton("+", f'addTag("{t}"); ', "button tagButton", f"add{n}", False, f'Add {self.config["tagCtgs"][t]["title"]} tag' )
-	# 			rh += f'<th class="chartMeta"><a class="chartMeta" href="javascript:sortTable({n + sortOffset});">{self.config["tagCtgs"][t]["title"]}</a>{js}</th>' 
-	# 		else:
-	# 			title = self.config["tagCtgs"][t]["title"]
-	# 			rh += f'<th class="chartMeta"><a title="Sort by {title}" class="chartMeta" href="javascript:sortTable({n + sortOffset});">{title}</a> ' 
-	# 			hover = f'<span class=hoverText>{self.tagHover[t]}</span>'
-	# 			rh += f'<div class=hoverContainer>{self.constants["icons"]["search"]}{hover}</div>'
-	# 	if not reviewMode:
-	# 		for f in self.userFieldOrder:
-	# 			if self.config["userFields"][f]["type"] in ["text", "txts", "date"] and not reviewMode:
-	# 				title = self.config["userFields"][f]["title"]
-	# 				# rh += f'<th class="chartMeta"><a title="Sort by {title}" class="chartMeta" href="javascript:sortTable({n + 2});">{title}</a></th>' 
-	# 				rh += f'<th class="chartMeta">{title}</th>' 
-	# 	rh += '</tr></thead><tbody>'
-	# 	return f"<tr>{rh}</tr>"
 	def makeButton(self, value, onclick, style, id, disabled, title):
 		# songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
 		title = f'''<span id="{id}" class="hoverText songInfo">{title}</span>'''
@@ -1364,7 +1286,7 @@ function getDataList()
 		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A"}
 # s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
-# s.loadData('111111')
+# s.adminEdit()
 # s = Songs('106932376942135580175', 'Olucas', '')
 # s = Songs('106932376942135580175', 'Othoryvo', '')
 # s = Songs('106932376942135580175', 'OmarieNme', '')
