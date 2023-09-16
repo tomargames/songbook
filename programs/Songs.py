@@ -74,6 +74,7 @@ class Songs(object):
 		users = Users.Users()			# object containing userDict of users of ToMarGames
 		self.errors = []
 		self.appUsers = users.getAppUsers(users.SONGBOOK)
+		self.user = gid
 		if self.rr in self.roleList:	#if self.rr is in that list, keep it and move on
 			self.loadData(deckString)
 		elif len(self.roleList) > 0:	# otherwise, grab the first one
@@ -349,6 +350,7 @@ class Songs(object):
 		print(f'SBdata["config"] = {json.dumps(self.config)}; ')
 		print(f'SBdata["constants"] = {json.dumps(self.constants)}; ')
 		print(f'SBdata["tagData"] = {json.dumps(self.tagJs)}; ')
+		print(f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; ')
 		# print("console.log(SBdata); ")
 		print('</script>')
 		#if self.rr is blank, this is your first time in, look for cookie
@@ -1286,7 +1288,7 @@ function getDataList()
 		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A"}
 # s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
-# s.adminEdit()
+# s.jsFunctions()
 # s = Songs('106932376942135580175', 'Olucas', '')
 # s = Songs('106932376942135580175', 'Othoryvo', '')
 # s = Songs('106932376942135580175', 'OmarieNme', '')

@@ -4,18 +4,17 @@ function $(x) {
 function loadJs(x)
 {
 	sessionStorage.setItem('lastSortedCol', -1);
-	var CHrec, SBlist, dd, CHcols, CHlines, dialog;
-	let rr = getFromLocal('songBookRR');
-	SBdata["role"] = rr.substring(0, 1);
-	SBdata["repository"] = rr.substring(1);
-	dd = getFromLocal('songBookDD');
-	CHcols = getFromLocal('songBookCols');
-	CHlines = getFromLocal('songBookRows');
-	if (CHcols == null || CHlines == null) {
+	var CHrec, SBlist, dialog;
+	SBdata["role"] = getFromLocal('songBookRR').substring(0, 1);
+	SBdata["repository"] = getFromLocal('songBookRR').substring(1);
+	SBdata["deckString"] = getFromLocal('songBookDD');
+	SBdata["CHcols"] = getFromLocal('songBookCols');
+	SBdata["CHlines"] = getFromLocal('songBookRows');
+	SBdata["metronomeStatus"] = "off";
+	if (SBdata["CHcols"] == null || SBdata["CHlines"] == null) {
 		alert("Set the rows and columns for chart display on this device.");
 		settingsDialog();
 	}
-	var metronomeStatus = "off";
 	// initialize metronome
 	init();
 	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);
@@ -53,7 +52,7 @@ function enableSave(e)
 }
 function addEntry(n)
 {
-	var titles = {"LL": "URL", "SB": "file name"};
+	let titles = {"LL": "URL", "SB": "file name"};
 	for (i = 0; i < 7; i++)
 	{
 		if ($("TYP" + i).disabled == true)
@@ -267,7 +266,7 @@ function importChart()
 }
 function toggleDiv(id)
 {
-	var div = $(id);
+	let div = $(id);
 	if(div.style.display != 'none')
 	{
 		div.style.display = 'none';
@@ -600,24 +599,23 @@ function createChartPage(e) {				// called when you press + for next chart page
 	tbl = newBorderedTable();
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
-	let CHcols = getFromLocal('songBookCols');
-	let CHlines = getFromLocal('songBookRows');
 	CHrec["currentColumnIndex"] = 0;
 	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
-	while (CHrec["currentColumnIndex"] < CHcols) {
-		// console.log(`new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
+	while (CHrec["currentColumnIndex"] < SBdata["CHcols"]) {
+		// console.log(`top of new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
+		// if (CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["type"] != "Hidden") {  // this doesn't work
 		let setTable = newBorderedTable();												// this holds chart lines
 		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
 		addTDtoTRnode(setTable, row);
-		while (CHrec["linesInColumn"] < CHlines && CHrec["currentSetIndex"] < CHrec["sets"].length) {
+		while (CHrec["linesInColumn"] < SBdata["CHlines"] && CHrec["currentSetIndex"] < CHrec["sets"].length) {
 			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
-				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHlines) {	// still room for meta line and at least first lines
+				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < SBdata["CHlines"]) {	// still room for meta line and at least first lines
 					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
 				} else {
-					CHrec["linesInColumn"] = CHlines;
+					CHrec["linesInColumn"] = SBdata["CHlines"];
 				}
 			}
-			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < CHlines) {	// room for next line
+			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["pattern"].length < SBdata["CHlines"]) {	// room for next line
 				displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable);
 				CHrec["currentLineIndex"] += 1;
 				if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
@@ -625,11 +623,11 @@ function createChartPage(e) {				// called when you press + for next chart page
 					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 						CHrec["currentLineIndex"] = 0;
 					} else {
-						CHrec["linesInColumn"] = CHlines;
+						CHrec["linesInColumn"] = SBdata["CHlines"];
 					}
 				}
 			} else {				// need to make a new column
-				CHrec["linesInColumn"] = CHlines;
+				CHrec["linesInColumn"] = SBdata["CHlines"];
 			}
 		}
 		CHrec["currentColumnIndex"] += 1;
@@ -827,7 +825,7 @@ function sortTable(colIn)
 }
 function openLink(x)
 {
-	var w = window.open(x);
+	let w = window.open(x);
 }
 function customDate(revDate)
 {
@@ -1017,19 +1015,21 @@ function doSearch(s)
 		if ($("sDisplay") != null) {
 			$('smallModal').style.display = "none";
 		} 
-		if ($("saveButton") != null) {
-			// if save is enabled, then you have unsaved changes, so prompt to save
-			if ($("saveButton").disabled==false) 
-			{
-				// just save before you leave, don't even ask
-				//editSong(s);
-				if (confirm("Leave without saving?") == true)
+		if (SBdata["role"] == "O") {
+				if ($("saveButton") != null) {
+				// if save is enabled, then you have unsaved changes, so prompt to save
+				if (typeof CHrec != "undefined" && $("saveButton").disabled == false) 
 				{
-					execSearch(s);
-				}
-				else
-				{
-					return;
+					// just save before you leave, don't even ask
+					//editSong(s);
+					if (confirm("Leave without saving?") == true)
+					{
+						execSearch(s);
+					}
+					else
+					{
+						return;
+					}
 				}
 			}
 		}
@@ -1166,6 +1166,12 @@ function songAction(e) {
 		showHistory(songId);
 	} else if (type == "add  ") {
 		addEntry(songId);
+	} else if (type == "likeY") {
+		document.gForm.oper.value = `LY${SBdata["userName"]}${songId}`;
+		document.gForm.submit();
+	} else if (type == "likeN") {
+		document.gForm.oper.value = `LN${SBdata["userName"]}${songId}`;
+		document.gForm.submit();
 	} 
 	if (e != null) { e.preventDefault(); }	
 }
@@ -1255,10 +1261,22 @@ function detailLine(rec, tbl) {
 			addHiddenTD(row, SBlist["songs"][rec]["RN"]);
 			addHiddenTD(row, SBlist["songs"][rec]["RA"]);
 			addHiddenTD(row, SBlist["songs"][rec]["RT"]);
-			actionBar.appendChild(createButton(`sched${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule ${rec}`));
+			actionBar.appendChild(createButton(`sched${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule ${SBlist["songs"][rec]["TT"]}`));
+		} else {
+			// like buttons for User role. If there's already a tag for this user, highlight it, id it as "N", and clicking will turn it off -- "Y" will turn it on
+			let id, clr;
+			if (SBlist["songs"][rec]["TG"].includes(SBdata["userName"])) {
+				id = `likeN${rec}`;
+				clr = "lightgreen";
+			} else {
+				id = `likeY${rec}`;
+				clr = "lavender";
+			}
+			actionBar.appendChild(createButton(id, "pnlButton", songAction, SBdata["constants"]["icons"]["like"], `Add ${SBlist["songs"][rec]["TT"]} to set`));
+			actionBar.childNodes[0].childNodes[0].style.backgroundColor = clr; // outerDiv is action bar's first child, button is outerDiv's first
 		}
 		if (SBlist["songs"][rec]["CS"] < 2) {
-			actionBar.appendChild(createButton(`lchrt${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Chord chart for ${rec}`));
+			actionBar.appendChild(createButton(`lchrt${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Chord chart for ${SBlist["songs"][rec]["TT"]}`));
 			actionBar.appendChild(createButton(`pdf  ${rec}`, "pnlButton", songAction, "pdf", `PDF of chart for ${rec}`, true));
 		}
 		Object.keys(SBlist["songs"][rec]["SB"]).forEach((item) => {
