@@ -25,7 +25,8 @@
     "B" : "Bridge",
     "S" : "Separator",
     "T" : "Transition",
-    "M" : "Miscellaneous"
+    "M" : "Miscellaneous",
+    "H" : "Hidden"
   },
   "metaKeywords": {
     "KEYI": "Key center for the source chords",
@@ -66,7 +67,8 @@
     "search": "🔍",
     "timer": "⌛",
     "stop": "🛑",
-    "save": "💾"
+    "save": "💾",
+    "like": "👍"
   },
   "metronomeNoteResolution": {
     "0": "Sixteenth Notes",
