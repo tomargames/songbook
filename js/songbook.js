@@ -53,6 +53,7 @@ function enableSave(e)
 function addEntry(n)
 {
 	let titles = {"LL": "URL", "SB": "file name"};
+	var titles = {"LL": "URL", "SB": "file name"};
 	for (i = 0; i < 7; i++)
 	{
 		if ($("TYP" + i).disabled == true)
