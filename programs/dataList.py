@@ -1,6 +1,7 @@
 #!python
 """
 Created on Tuesday September 27 2019 by tomar
+10/20/23 - deprecating, replacing with js process
 #!/usr/bin/python3
 #!C:\ProgramData\Anaconda3\python.exe#!/Users/tomar/Anaconda3/python.exe
 """

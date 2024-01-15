@@ -4,6 +4,7 @@ Created on Friday January 6, 2023 by marie
 #!/usr/bin/python
 #!python
 This script will return a CH record, readied for display
+Deprecated 12/9/23, to be replaced by CHmgr
 """
 import cgi
 import Songs
@@ -48,14 +49,8 @@ else:
 		for set in CH["sets"]:
 			counter[1] = 0
 			outrec.append({"meta": {}, "lines": []})
-			outrec[-1]["meta"]["key"] = set["meta"]["KEYO"]
-			outrec[-1]["meta"]["pattern"] = set["meta"]["PTN"]
-			outrec[-1]["meta"]["type"] = sb.constants["chartSetTypes"][set["meta"]["TYP"]]
-			outrec[-1]["meta"]["bpm"] = set["meta"]["BPM"]
-			outrec[-1]["meta"]["noteRes"] = set["meta"]["RES"]
-			outrec[-1]["meta"]["meter"] = set["meta"]["MTR"]
-			# outrec[-1]["meta"]["columns"] = set["meta"]["COL"]
-			# outrec[-1]["meta"]["lines"] = set["meta"]["ROW"]
+			for keyWord in set["meta"]:
+				outrec[-1]["meta"][keyWord] = set["meta"][keyWord]
 			outrec[-1]["meta"]["start"] = set["meta"]["start"]
 			outrec[-1]["meta"]["end"] = set["meta"]["end"]
 			for line in set["lines"]:

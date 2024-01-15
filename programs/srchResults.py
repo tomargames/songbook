@@ -14,8 +14,6 @@ def print1(x):
 	print(Songs.renderHtml(x))
 
 form = cgi.FieldStorage() # instantiate only once!
-		# if qType ==   'a':			#add card, this will not have a rslt
-		# elif qType == 'c':			#copy card, this will not have a rslt
 		# elif qType == 'D':			#deck search, D0, D1, etc.
 		# elif qType == 'e':			#chart errors
 		# elif qType == 'i':			#inactive

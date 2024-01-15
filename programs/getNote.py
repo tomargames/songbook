@@ -1,5 +1,6 @@
 #!python
 """
+Deprecated -- no longer in use
 Created on Tuesday September 17 31 2019 by tomar
 Updated on 2/27/23 to take NT input and return a new CH record (as does getCH from the stored record)
 #!/usr/bin/python

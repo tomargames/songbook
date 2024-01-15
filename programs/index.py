@@ -58,7 +58,6 @@ print(f'''
 <body onload="loadJs('x');">
 <script>
 	var schdSelect = ''; 
-	var roleList = [];
 </script>
 ''')
 
@@ -72,6 +71,29 @@ print(f'''
 <input type="hidden" name="decks" value="{decks}">
 <input type="hidden" name="rr" value="{rr}">
 <input type="hidden" name="RL" value="{str(datetime.date.today())}">
+<div id="myModal" class="modal">
+  <!-- Modal content for report display -->
+  <div class="modal-content">
+    <div id="nDisplay">filler</div>
+    <div id="nClose" class="close">close</div>
+  </div>
+</div>
+<div id="chartModal" class="modal">
+  <!-- Modal content for chart display -->
+  <div class="modal-content">
+    <div id="cPanel" class="chartButton">filler</div>
+	<div id="cDisplay" class="chartModal">filler</div>
+  </div>
+</div>  
+<div id="smallModal" class="smallmodal">
+  <!-- Modal content for songDetail-->
+  <div class="modal-content">
+    <p id="sDisplay">filler</p>
+    <p id="sClose" class="close">close</p>
+  </div>
+</div>
+<dialog id="dialog" style="background-color: #DDD";>
+</dialog>
 ''')											#</form is left off, so song input can be added to form
 # utils.writeLog(f"index.py, rr is {rr}, dd is {decks}, device is {device}")
 if rr == '':									# if first time in, get from cookie
@@ -101,184 +123,91 @@ else:
 		except Exception as e:
 			print(f'admin file error: gid={gid}, rr={rr}, decks={decks}, error={e}')
 		else:
-			s = ''					# will be generated for new record, or supplied for edited record
-			rev = ''
-			# if oper starts with C it's a copy, otherwise E for edit
 			# utils.writeLog(f'index.py: oper is {oper}')
-			if oper > '': 
+			rev = {"oper": oper, "songId": "", "action": ""}
+			if oper > '': 				# if there's something in oper, gather form input
+				# utils.writeLog(f'index.py: oper > "", oper is {oper}, rev is {rev}')
 				if oper[0] == "L":				# this is a user liking/unliking a song, set message in rev
+					# utils.writeLog(f'index.py: oper is L, rev is {rev}')
 					yn = oper[1]
 					userName = oper[2:9]
-					s = oper[9:]
+					rev["songId"] = oper[9:]
 					# utils.writeLog(f"index.py with {yn} and {userName} and {s}, TG is {sb.songDict[s]}")
 					if yn == "N":
-						if userName in sb.songDict[s]["TG"]:
-							sb.songDict[s]["TG"].remove(userName)
-							rev = f"Tag {userName} removed from {sb.songDict[s]['TT']}. "
-							yn = "Y"				# action taken
+						if userName in sb.songDict[rev["songId"]]["TG"]:
+							sb.songDict[rev["songId"]]["TG"].remove(userName)
+							rev["action"] = "unliked"
 						else:
-							rev = f"Tag {userName} not found in {sb.songDict[s]['TT']}, no action taken. "
+							rev["action"] = "none"
 					else:
-						if userName in sb.songDict[s]["TG"]:
-							rev = f"Tag {userName} already in {sb.songDict[s]['TT']}, no action taken. "
-							yn = "N"				# no action taken
+						if userName in sb.songDict[rev["songId"]]["TG"]:
+							rev["action"] = "none"
 						else:
-							sb.songDict[s]["TG"].append(userName)
-							rev = f"Tag {userName} added to {sb.songDict[s]['TT']}. "
-					if yn == "Y":					# if the file has changed, save it
+							sb.songDict[rev["songId"]]["TG"].append(userName)
+							rev["action"] = "liked"
+					if rev["action"] != "none":					# if the file has changed, save it
 						fileName = os.path.join(sb.root, sb.appFolder, 'data', sb.rr[1:], 'songBook')		# song file
-						if utils.saveFile(fileName, sb.songDict, True) == 'good':
-							rev = f'{rev} File saved successfully. {sb.songLink(s)}'
+						rev["rc"] = utils.saveFile(fileName, sb.songDict, True) 
+				else:				# these are actions for role O, could be E, C, or S
+					rev["songId"] = oper[1:]
+					for fld in ["RN", "revNote", "RL"]:
+						rev[fld] = form.getvalue(fld,'')
+						if type(rev[fld]) is list:
+							rev[fld] = rev[fld][0]
+					if oper[0] == 'S':
+						try:
+							rev = sb.reviewOnly(rev)	
+						except Exception as e:
+							print(f'error writing review record: {e}')
+					elif oper[0] == 'E':
+						rev["type"] = "edit"
+						# tags and links don't get copied to input fields on a copy, so if it's a copy, do it here
+						rev["TG"] = []
+						if rev["songId"] == utils.formatNumber(utils.baseConvert(len(sb.songDict), 32), 3):
+							sb.songDict[rev["songId"]] = sb.newSongCard()
+							orig = form.getvalue("origID", '')
+							if orig > '':
+								rev["type"] = "copy"
+								for tag in sb.songDict[orig]["TG"]:
+									if form.getvalue(f'del{tag}') != "on":
+										rev["TG"].append({"action": "a", "key": tag})
+							else:
+								rev["type"] = "add"
 						else:
-							rev = f'{rev} File not saved. {sb.songLink(s)}'
-				else:
-					RN = form.getvalue('RN','')
-					# utils.writeLog(f"index.py: RN from form is {RN}, type is {type(RN)}, RN[0] is {RN[0]}");
-					if oper[0] in ['C', 'E']:
-						#collect all the input and send it to sb.processInput()
-						changeRec = sb.newChangeRec()
-						if oper[0] == 'C':			#create a new key for s, k is the record to be copied
-							k = oper[1:]
-							s = utils.formatNumber(utils.baseConvert(len(sb.songDict), 32), 3)
-							sb.songDict[s] = sb.songDict[k].copy()
-							sb.songDict[s]["RL"] = sb.songDict[s]["RN"] = ""
-							sb.songDict[s]["RA"] = sb.songDict[s]["RT"] = 0
-							oper = f'E{s}'
-						elif oper[0] == 'E':				# songbook file processing
-							s = oper[1:]
-							if s == utils.formatNumber(utils.baseConvert(len(sb.songDict), 32), 3):
-								#new record, all fields will go into changeRec
-								sb.songDict[s] = sb.newSongCard()
-						# otherwise, this is an edit to an existing song
-						# utils.writeLog(f"index.py for E, song is {s}, RN is {form.getvalue('RN','')}, RN is {RN}")
-						for t in sb.songDict[s]["TG"]:
-							if form.getvalue(f'del{t}') == "on":
-								changeRec["TG"].append(("-", t))
+							for t in sb.songDict[rev["songId"]]["TG"]:
+								if form.getvalue(f'del{t}') == "on":
+									rev["TG"].append({"action": "d", "key": t})
 						for f in ['LL', 'SB']:
-							# process deletes, edits, and possible adds to LL and then do it again for SB
-							# check if any are to be deleted or have changed, and put them in changeRec
-							for i in sb.songDict[s][f]:
-								# utils.writeLog(f"looking for field del{f}{i}, value {form.getvalue(f'del{f}{i}', '')}")
+							rev[f] = []
+							for i in sb.songDict[rev["songId"]][f]:
 								if form.getvalue(f'del{f}{i}') == "delete":
-									changeRec[f].append(("-", i, sb.songDict[s][f][i]))
-								else:
-									#check to see if value has been changed
+									rev[f].append({"action": "d", "key": i})
+								elif rev["type"] == "copy":						# make add records for existing links
+									rev[f].append({"action": "a", "key": i, "value": sb.songDict[rev["songId"]][f][i]})
+								else:			#check to see if value has been changed
 									fieldValue = form.getvalue(f'{f}{i}', '')
-									if sb.songDict[s][f][i] != fieldValue:
-										# will be [=, key, oldvalue, newvalue]
-										changeRec[f].append(("=", i, sb.songDict[s][f][i], fieldValue))
-						# 6 instances of TYP LBL VAL and TAG
+									if sb.songDict[rev["songId"]][f][i] != fieldValue:
+										rev[f].append({"action": "e", "key": i, "value": fieldValue})
 						for i in range(7):
 							newTag = form.getvalue(f'TAG{i}', '')
 							if newTag > '':
-								changeRec["TG"].append(("+", newTag))
-							typ = form.getvalue(f'TYP{i}', '')
-							if typ > '':
-								lbl = form.getvalue(f'LBL{i}', '')
-								val = form.getvalue(f'VAL{i}', '')
-								changeRec[typ].append(("+", lbl, val))
-						for f in ['TT', 'DK'] + list(sb.config["userFields"]):
-							# utils.writeLog(f"in index.py, f is {f}, value is {form.getvalue(f, '')}")
-							val = form.getvalue(f,'')
-							if sb.songDict[s][f] != val:
-								changeRec[f].append(sb.songDict[s][f])
-								changeRec[f].append(val)
+								rev["TG"].append({"action": "a", "key": newTag})
+							f = form.getvalue(f'TYP{i}', '')
+							if f > '':
+								rev[f].append({"action": "a", "key": form.getvalue(f'LBL{i}', ''), "value": form.getvalue(f'VAL{i}', '')})
+						for f in ['TT', 'DK', 'NT'] + list(sb.config["userFields"]):				#single value fields
+							rev[f] = form.getvalue(f,'')
 						try:
-							# utils.writeLog(f"sending {oper}, {s}, RN: {RN}, RL: {form.getvalue('RL','')}, revNote: {form.getvalue('revNote','')}") 
-							rev = sb.processInput(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
-								RN, form.getvalue('RL',''), form.getvalue('revNoteEdit', ''))
+							# utils.writeLog(rev)
+							rev = sb.processInput(rev)
 						except Exception as e:
-							print(f'file error: {e}, changeRec is {changeRec}')
-					elif oper[0] == 'S':
-						# utils.writeLog(f"index.py: just before reviewOnly with {form.getvalue('RN','')}, {form.getvalue('RL','')}, and {form.getvalue('RrevNote','')}")
-						# utils.writeLog(f"index.py for S, song is {s}, RL is {form.getvalue('RL','')}, RN is {form.getvalue('RN',''), }")
-						revNote = form.getvalue('revNote', '')
-						if type(RN) is list:
-							RN = RN[0]
-						if type(revNote) is list:
-							revNote = revNote[0]
-						try:
-							rev = sb.reviewOnly(oper, RN, form.getvalue('RL',''), revNote)	
-						except Exception as e:
-							print(f'error writing review record: {e}')
-				RN = form.getvalue('RN','')
-				# utils.writeLog(f"index.py: RN from form is {RN}, type is {type(RN)}, RN[0] is {RN[0]}");
-				if oper[0] in ['C', 'E']:
-					#collect all the input and send it to sb.processInput()
-					changeRec = sb.newChangeRec()
-					if oper[0] == 'C':			#create a new key for s, k is the record to be copied
-						k = oper[1:]
-						s = utils.formatNumber(utils.baseConvert(len(sb.songDict), 32), 3)
-						sb.songDict[s] = sb.songDict[k].copy()
-						sb.songDict[s]["RL"] = sb.songDict[s]["RN"] = ""
-						sb.songDict[s]["RA"] = sb.songDict[s]["RT"] = 0
-						oper = f'E{s}'
-					elif oper[0] == 'E':				# songbook file processing
-						s = oper[1:]
-						if s == utils.formatNumber(utils.baseConvert(len(sb.songDict), 32), 3):
-							#new record, all fields will go into changeRec
-							sb.songDict[s] = sb.newSongCard()
-					# otherwise, this is an edit to an existing song
-					# utils.writeLog(f"index.py for E, song is {s}, RN is {form.getvalue('RN','')}, RN is {RN}")
-					for t in sb.songDict[s]["TG"]:
-						if form.getvalue(f'del{t}') == "on":
-							changeRec["TG"].append(("-", t))
-					for f in ['LL', 'SB']:
-						# process deletes, edits, and possible adds to LL and then do it again for SB
-						# check if any are to be deleted or have changed, and put them in changeRec
-						for i in sb.songDict[s][f]:
-							# utils.writeLog(f"looking for field del{f}{i}, value {form.getvalue(f'del{f}{i}', '')}")
-							if form.getvalue(f'del{f}{i}') == "delete":
-								changeRec[f].append(("-", i, sb.songDict[s][f][i]))
-							else:
-								#check to see if value has been changed
-								fieldValue = form.getvalue(f'{f}{i}', '')
-								if sb.songDict[s][f][i] != fieldValue:
-									# will be [=, key, oldvalue, newvalue]
-									changeRec[f].append(("=", i, sb.songDict[s][f][i], fieldValue))
-					# 6 instances of TYP LBL VAL and TAG
-					for i in range(7):
-						newTag = form.getvalue(f'TAG{i}', '')
-						if newTag > '':
-							changeRec["TG"].append(("+", newTag))
-						typ = form.getvalue(f'TYP{i}', '')
-						if typ > '':
-							lbl = form.getvalue(f'LBL{i}', '')
-							val = form.getvalue(f'VAL{i}', '')
-							changeRec[typ].append(("+", lbl, val))
-					for f in ['TT', 'DK'] + list(sb.config["userFields"]):
-						# utils.writeLog(f"in index.py, f is {f}, value is {form.getvalue(f, '')}")
-						val = form.getvalue(f,'')
-						if sb.songDict[s][f] != val:
-							changeRec[f].append(sb.songDict[s][f])
-							changeRec[f].append(val)
-					try:
-						# utils.writeLog(f"sending {oper}, {s}, RN: {RN}, RL: {form.getvalue('RL','')}, revNote: {form.getvalue('revNote','')}") 
-						rev = sb.processInput(oper, changeRec, sb.notesFormat(form.getvalue('NT','')), 
-							RN, form.getvalue('RL',''), form.getvalue('revNoteEdit', ''))
-					except Exception as e:
-						print(f'file error: {e}, changeRec is {changeRec}')
-				elif oper[0] == 'S':
-					# utils.writeLog(f"index.py: just before reviewOnly with {form.getvalue('RN','')}, {form.getvalue('RL','')}, and {form.getvalue('RrevNote','')}")
-					# utils.writeLog(f"index.py for S, song is {s}, RL is {form.getvalue('RL','')}, RN is {form.getvalue('RN',''), }")
-					revNote = form.getvalue('revNote', '')
-					if type(RN) is list:
-						RN = RN[0]
-					if type(revNote) is list:
-						revNote = revNote[0]
-					try:
-						rev = sb.reviewOnly(oper, RN, form.getvalue('RL',''), revNote)	
-					except Exception as e:
-						print(f'error writing review record: {e}')
+							print(f'file error: {e}')
+					else:
+						utils.writeLog(f"no action, unrecognized oper code, rev is {rev}")
 				#response will send stuff back, then
-				# utils.writeLog(f"came out other side, rev is {rev}")
 				sb = Songs.Songs(gid, rr, decks)
-				print(sb.jsFunctions())
-				# utils.writeLog(f"rev={rev}")
-				# put the message in the message area
-				renderHtml(f"<script>document.getElementById('message').innerHTML = '<div class=message>{rev}</div>'; </script>")
-			else:
-				print(sb.jsFunctions())
+			renderHtml(sb.jsFunctions(rev))
+			renderHtml('<div id="searchResults"></div>')	
 		print('</div>')
 	else:
 		print('''

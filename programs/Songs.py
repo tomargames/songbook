@@ -103,94 +103,88 @@ class Songs(object):
 			return self.config["userFields"][f]
 		else:
 			return "ERROR"
-	def reviewOnly(self, oper, RN, RL, revNote):
-		# utils.writeLog(f'reviewOnly: {oper}, {RN}, {RL}, and {revNote}')
-		rev = 'If this is here, something is wrong'
-		s = oper[1:]
-		self.songDict[s]["RL"] = RL
-		self.songDict[s]["RN"] = RN
+	def reviewOnly(self, rev):
+		rev["action"] = 'If this is here, something is wrong'
+		for fld in ["RN", "RL"]:
+			self.songDict[rev["songId"]][fld] = rev[fld]
 		try:
-			if self.recReview(s, revNote, self.newChangeRec(), RL, RN) == 'good':
-				# utils.writeLog(f"reviewOnly: wrote review record, now update song {s} dates")
-				self.songDict[s]["RL"] = RL
-				self.songDict[s]["RN"] = RN
+			rc = self.recReview(rev)
+			if rc == 'good':
+				rev["action"] = "reviewOnly"
+				# utils.writeLog(f'reviewOnly: wrote review record, now update song {rev["songId"]} dates, rev is {rev}')
+				self.songDict[rev["songId"]]["RL"] = rev["RL"]
+				self.songDict[rev["songId"]]["RN"] = rev["RN"]
 				fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
-				if utils.saveFile(fileName, self.songDict, True) == 'good':
-					rev = f'Record saved, due on {self.songDict[s]["RN"]}: {self.songLink(s)}'
-				else:
-					rev = f'Error saving record, review record written: {self.songLink(s)}'
-					utils.writeLog(f'Error on save, rev = {rev}')
+				rev["rc"] = utils.saveFile(fileName, self.songDict, True)
 			else:
-				rev = f'Record not saved, error writing review record for {self.songLink(s)}' 
+				rev["action"] = rc
 		except Exception as e:
-			utils.writeLog(f"Exception in recReview on song {s}: {e}" )
-			rev = e
+			utils.writeLog(f'Exception in reviewOnly: {e}' )
+			rev["action"] = e
 		return rev
-	def processInput(self, oper, changeRec, NT, RN, RL, revNote):
-		# utils.writeLog(f"in processInput, oper = {oper}, changeRec = {changeRec}")
-		s = oper[1:]
-		if s == utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3):
-		#new record, put an empty dict into songdict
-			self.songDict[s] = self.newSongCard()
-		#process the entries in changeRec for TG
-		for tg in changeRec["TG"]:			#each tg item is [+/-, tag]
-			if tg[0] == "+":
-				self.songDict[s]["TG"].append(tg[1])
-			else:
-				self.songDict[s]["TG"].remove(tg[1])
-		#process the entries in changeRec for LL and SB
+	def processInput(self, rev):
+		# utils.writeLog(f'Songs.py.processInput, rev is {rev}')
+		changeRec = self.newChangeRec()
+		if rev["type"] in ["add", "copy"]:
+			self.songDict[rev["songId"]] = self.newSongCard()
+		for f in ['TT', 'DK', "NT", "RN", "RL"] + list(self.config["userFields"]):
+			if rev[f] != self.songDict[rev["songId"]][f]:
+				self.songDict[rev["songId"]][f] = rev[f]
+				if f not in ["RN", "RL"]:
+					changeRec[f].append({"old": self.songDict[rev["songId"]][f], "new": rev[f]})
+					rev.pop(f)
+		# utils.writeLog(f'1 changeRec is {changeRec}, rev is {rev}')		
+		for t in rev["TG"]:
+			if t["action"] == "a":
+				self.songDict[rev["songId"]]["TG"].append(t["key"])
+			elif t["action"] == "d":
+				try:
+					self.songDict[rev["songId"]]["TG"].remove(t["key"])
+				except Exception as e:
+					utils.writeLog(f'ERROR trying to remove tag {t} from {rev["songId"]}')
+			changeRec["TG"].append(t)
+		rev.pop("TG")
 		for f in ['LL', 'SB']:
-			for tg in changeRec[f]:			#each tg item is [+/-/=, label, value(, newvalue for =)]
-				if tg[0] == "+":
-					self.songDict[s][f][tg[1]] = tg[2]
-				elif tg[0] == "-":
-					self.songDict[s][f].pop(tg[1])			#this was [2], changing to [1]
-				else:
-					self.songDict[s][f][tg[1]] = tg[3]
-		#process TT and DK and user fields in changeRec
-		for f in ['TT', 'DK'] + list(self.config["userFields"]):
-			if len(changeRec[f]) > 0:
-				self.songDict[s][f] = changeRec[f][1]
-		self.songDict[s]["RL"] = RL
-		# utils.writeLog(f"RN is {RN}, on record it's {self.songDict[s]['RN']}")
-		if RN != self.songDict[s]["RN"]:					# if no schedule date specified, put today's date in due date
-			self.songDict[s]["RN"] = RN
-		# else:
-		# 	self.songDict[s]["RN"] = str(self.today)
-		if self.songDict[s]["NT"] != NT:					#if change to existing NT, add it to changeRec
-			changeRec["NT"] = True
-			self.songDict[s]["NT"] = NT
-		#validate and save record
-		#check required fields
-		rev = 'If this is here, something is wrong'
-		if self.songDict[s]["TT"] == '' or self.songDict[s]["DK"] == '':
-			rev = f'Record not saved, check title and deck: {self.songLink(s)}'
+			for t in rev[f]:			#each tg item is [action: a/d/e, key: label, new:(a and e only)]
+				if t["action"] == "a":
+					self.songDict[rev["songId"]][f][t["key"]] = t["value"]
+				elif t["action"] == "d":
+					self.songDict[rev["songId"]][f].pop(t["key"])		
+				elif t["action"] == "e":
+					changeRec[f][t["key"]]["old"] = self.songDict[rev["songId"]][f][t["key"]]
+					self.songDict[rev["songId"]][f][t["key"]] = t["value"]
+				changeRec[f].append(t)
+			rev.pop(f)
+		# #validate and save record
+		rev["action"] = 'If this is here, something is wrong'
+		if self.songDict[rev["songId"]]["TT"] == '' or self.songDict[rev["songId"]]["DK"] == '':
+			rev["action"] = f'Record not saved, check title and deck: {self.songLink(rev["songId"])}'
 		else:
 			# validate the tags have valid tag categories
 			goodtags = True
-			for t in self.songDict[s]["TG"]:
+			for t in self.songDict[rev["songId"]]["TG"]:
 				if t[0] not in self.config["tagCtgs"]:
 					goodtags = False
-					rev = f'Record not saved, check tag {t}: {self.songLink(s)}'
+					rev["action"] = f'Record not saved, check tag {t}: {self.songLink(rev["songId"])}'
 			if goodtags == True:
 				#deal with printing if apostrophes are in the title
 				# utils.writeLog(f"ready to save, NT is {self.songDict[s]['NT']}")
-				title = re.sub("'", "&apos;", self.songDict[s]["TT"])
+				title = re.sub("'", "&apos;", self.songDict[rev["songId"]]["TT"])
 				fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
 				if utils.saveFile(fileName, self.songDict, True) != 'good':
-					rev = f'Error saving record: {self.songLink(s)}'
+					rev["action"] = f'Error saving record: {self.songLink(rev["songId"])}'
 					utils.writeLog(f'Error on save, rev = {rev}')
 				else:
 					# utils.writeLog(f"writing review record for {s}")	
 					try:
-						if self.recReview(s, revNote, changeRec, RL, RN) != 'good':
-							rev = f'Record saved, error writing review record for {self.songLink(s)}' 
+						if self.recReview(rev) != 'good':
+							rev["action"] = f'Record saved, error writing review record for {self.songLink(rev["songId"])}' 
 						else:
-							rev = f'Record saved, due on {self.songDict[s]["RN"]}: {self.songLink(s)}'
+							rev["action"] = f'Record saved, due on {self.songDict[rev["songId"]]["RN"]}: {self.songLink(rev["songId"])}'
 					except Exception as e:
-						utils.writeLog(f"Exception in recReview on song {s}: {e}" )
-						rev = e
-		# utils.writeLog(f'processInput for song {s} rev {rev}')
+						utils.writeLog(f'Exception in recReview on song {rev["songId"]}: {e}' )
+						rev["action"] = e
+		rev["songTitle"] = self.songDict[rev["songId"]]["TT"]
 		return rev
 	def addLyric(self, curSet, lines, curLine, start, end):
 		if 'T' in curSet["meta"]["PTN"]:
@@ -316,172 +310,39 @@ class Songs(object):
 			for tag in sorted(self.tagDict[type]):
 				self.tagDict[type][tag] = sorted(self.tagDict[type][tag])
 				self.tagJs[type][tag] = len(self.tagDict[type][tag])
-	def deckCheckBoxes(self):
-		rh = '<table border=1 class="decks"><tr>'
-		#deck checkboxes -- use copy of self.deckString
-		tempDecks = self.deckString[:]
-		for d in sorted(self.config["decks"]):
-			dLink = '<a href="javascript:doSearch(\'D{}\');">{}</a>'.format(d, self.config["decks"][d]["name"])
-			if tempDecks == '':
-				chk = ''
-			else:
-				if tempDecks[0] == '1':
-					chk = "checked"
-				else:
-					chk = ''
-				tempDecks = tempDecks[1:]
-			#rr == 'O' will have additional rows in each cell
-			rh += f'<td style="background-color: {self.config["decks"][d]["color"]}; padding: 5px;">' 
-			rh += f'{dLink} ({len(self.config["decks"][d]["songs"])})' 
-			rh += f'<input type="checkbox" onchange=getDataList() id="c{d}" {chk}>' 
-			if self.rr[0] == 'O':
-				rh += f'<div id="due{d}">Due: {len(self.config["decks"][d]["due"])}</div>' 
-				rh += f'<div id="rev{d}">Rev: {len(self.config["decks"][d]["rev"])}</div>' 
-			rh += '</td>'
-		rh += '</tr></table>'
+	def jsFunctions(self, rev):
+		# utils.writeLog(f'jsFunctions: rev is {rev}')
+		rh = ''
+		rh += '<script>var SBdata = {}; '
+		rh += f'SBdata["config"] = {json.dumps(self.config)}; '
+		rh += f'SBdata["constants"] = {json.dumps(self.constants)}; '
+		rh += f'SBdata["musicConstants"] = {json.dumps(self.musicConstants)}; '
+		rh += f'SBdata["tagData"] = {json.dumps(self.tagJs)}; '
+		rh += f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; '
+		rh += f'SBdata["roleList"] = {json.dumps(self.roleList)}; '
+		rh += f'SBdata["dataList"] = {json.dumps(self.dataList())}; ' 
+		rh += f'SBdata["revData"] = {json.dumps(rev)}; ' 
+		rh += f'SBdata["nextSongID"] = "{utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)}"; ' 
+		rh += f'SBdata["codeDB"] = {json.dumps(self.codeDB)}; '
+		rh += f'SBdata["chordDB"] = {json.dumps(self.chordDB)}; '
+		rh += '</script>'
 		return rh
-	def jsFunctions(self):
-		rh = ''
-		# deckString -- if empty, default to everything on, and populate the form "decks"
-		print(f'<script>document.gForm.decks.value = "{self.deckString}"; ')
-		for r in self.roleList:
-			print(f' roleList.push("{r}"); ')
-		print('var SBdata = {}; ')
-		print(f'SBdata["config"] = {json.dumps(self.config)}; ')
-		print(f'SBdata["constants"] = {json.dumps(self.constants)}; ')
-		print(f'SBdata["tagData"] = {json.dumps(self.tagJs)}; ')
-		print(f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; ')
-		# print("console.log(SBdata); ")
-		print('</script>')
-		#if self.rr is blank, this is your first time in, look for cookie
-		rh += f'<datalist id="searchList">{self.dataList()}</datalist>' 
-		rh += '''
-<table border=0><tr valign="top"><td>		
-<input type="text" id="searchBox" onchange="doSearch();" list="searchList" 
-	style="font-size:24px; width:380px; color: darkgreen; 
-	background-color: lightgreen;" placeHolder="select">
-'''
-		if self.rr[0] == 'O' or len(self.roleList) > 1:
-			# drop-down with getdue, addcard, and ?
-			rh += '<select id="RA" name="RA" oninput=revAction()>'
-			rh += '<option value='f'>Options for role {self.rr}</option>' 
-			if self.rr[0] == 'O':
-				rh += '<option value=''>----------ACTIONS----------</option>'
-				rh += '<option value="DUE">List All Due</option>'
-				rh += '<option value="ADD">Add New Card</option>'
-				rh += '<option value="ADV">Review ahead</option>'
-				rh += '<option value="REV">List Reviewed today</option>'
-				rh += '<option value="RVD">List Reviewed by date</option>'
-				rh += '<option value="INA">List Inactive</option>'
-				rh += '<option value="RPT">Reports Menu</option>'
-				rh += '<option value="UPD">Update review history</option>'
-				rh += '<option value=''>----------SETTINGS----------</option>'
-				rh += '<option value="ADM">Admin</option>'
-			rh += '<option value="SET">Preferences</option>'
-			if len(self.roleList) > 1:
-				rh += '<option value=''>----------ROLES----------</option>'
-				for r in sorted(self.roleList):
-					if r != self.rr:
-						rh += f'<option value="{r}">Change to: {r}</option>' 
-						# rh += '<option value="C{}">Copy from: {}</option>'.format(r, r)
-			rh += '<option value="RPT">Data analysis</option>'			
-			rh += '</select>'
-			rh += '<br><div id="message"></div>'
-			rh += '<br><div id="reviewTitle"></div>'
-		rh += '</td><td>'
-		rh += self.deckCheckBoxes()
-		rh += '</td></tr></table>'
-		rh += '''
-<div id="myModal" class="modal">
-  <!-- Modal content for report display -->
-  <div class="modal-content">
-    <div id="nDisplay">filler</div>
-    <div id="nClose" class="close">close</div>
-  </div>
-</div>
-<div id="chartModal" class="modal">
-  <!-- Modal content for chart display -->
-  <div class="modal-content">
-    <div id="cPanel" class="chartButton">filler</div>
-	<div id="cDisplay" class="chartModal">filler</div>
-  </div>
-</div>  
-<div id="smallModal" class="smallmodal">
-  <!-- Modal content for songDetail-->
-  <div class="modal-content">
-    <p id="sDisplay">filler</p>
-    <p id="sClose" class="close">close</p>
-  </div>
-</div>
-<dialog id="dialog" style="background-color: #DDD";>
-</dialog>
-<script>
-// open media file in new window
-function showMedia(x)
-{
-'''
-		fileName = f'https://tomargames.xyz/{self.appFolder}/js/{self.rr[1:]}/' 
-		rh += f'window.open("{fileName}" + x); ' 
-		rh += '''
-}
-function getDataList()
-{
-	//this polls the deck checkboxes and posts to dataList.py to refresh dataList accordingly
-	var xhttp = new XMLHttpRequest();
-  	xhttp.onreadystatechange = function() 
-	{
-    	if (this.readyState == 4 && this.status == 200) 
-		{
-     		$("searchList").innerHTML = this.responseText;
-			doClear();	 
-    	}
- 	};
-	var val = ""; 
-'''
-		for d in sorted(self.config["decks"]):
-			rh += f'/* in deckDict loop for {d} */\n' 
-			rh += f'if ($("c{d}").checked == true) ' 
-			rh += '''
-	{
-		val += '1';
-	}
-	else
-	{
-		val += '0';
-	}
-'''
-		rh += '''
-	document.gForm.decks.value = val;
-	saveLocal('songBookDD', val);
-	g = document.gForm.gId.value;
-	d = val;
-	r = document.gForm.rr.value;
-	xhttp.open("POST", "dataList.py?g=" + g + "&d=" + d + "&r=" + r, true);
- 	xhttp.send();
-}
-</script>
-<div id="searchResults"></div>
-'''
-		return renderHtml(rh)
-	# deckString defaults to all decks turned on
 	def dataList(self):
-		rh = ''
+		rh = []
 		for s in sorted(self.deckFilter()):
 			if self.rr[0] == "O":		#if user is owner
-				songTitle = f'{self.songDict[s]["TT"]} ({self.songDict[s]["RN"]})' 
-				rh += f'<option value="o{s}">Song: {songTitle}  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})</option>'  
+				rh.append({"val": f'o{s}', "desc": f'Song: {self.songDict[s]["TT"]} ({self.songDict[s]["RN"]})  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})'})
 			else:
-				songTitle = self.songDict[s]["TT"]
-				rh += f'<option value="O{s}">Song: {songTitle}  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})</option>'  	
+				rh.append({"val": f'O{s}', "desc": f'Song: {self.songDict[s]["TT"]} ({self.config["decks"][self.songDict[s]["DK"]]["name"]})'})
 		for t in sorted(self.tagFilter()):
-			#<option value="o000">Song: Cry Me a River   (Vocal)</option>
-			rh += f'<option value="{encodeHtml(t)}">{self.config["tagCtgs"][t[0]]["title"]}: {t[1:]}({len(self.tagDict[t[0]][t[1:]])})</option>' 
+			rh.append({"val": encodeHtml(t), "desc": f'{self.config["tagCtgs"][t[0]]["title"]}: {t[1:]} ({len(self.tagDict[t[0]][t[1:]])})'})
 		return rh
 	def tagList(self, ctg):
-		rh = ''
+		rh = []
 		for t in sorted(self.tagDict[ctg]):
 			#<option value="AJamesTaylor">Artist: JamesTaylor</option>
-			rh += f'<option value="{ctg}{encodeHtml(t)}">{self.config["tagCtgs"][ctg]["title"]}: {t}({len(self.tagDict[ctg][t])})</option>' 
+			# rh += f'<option value="{ctg}{encodeHtml(t)}">{self.config["tagCtgs"][ctg]["title"]}: {t}({len(self.tagDict[ctg][t])})</option>' 
+			rh.append({"val": f'{ctg}{encodeHtml(t)}', "desc": f'{self.config["tagCtgs"][ctg]["title"]}: {t}({len(self.tagDict[ctg][t])})'})
 		return rh
 	def deckFilter(self):
 		possibles = []
@@ -629,26 +490,8 @@ function getDataList()
 		# utils.writeLog(f'Songs.py.getSongs("{q}")')
 		k = q[1:]
 		qType = q[0]
-		rh = title = copy = ''
-		if qType == 'a':				#add card
-			#create a record with key = base32 of size of songDict
-			s = utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)
-			self.songDict[s] = self.newSongCard()
-			possibles.append(s)
-			rslt = [s]
-			reviewMode = True
-		elif qType == 'c':				#copy card
-			#create a record with key = base32 of size of songDict
-			s = utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)
-			self.songDict[s] = self.songDict[k].copy()
-			self.songDict[s]["RL"] = self.songDict[s]["RN"] = ""
-			self.songDict[s]["CD"] = str(self.today)
-			self.songDict[s]["TT"] = f"{self.songDict[k]['TT']} (copy)"
-			possibles.append(s)
-			copy = k
-			rslt = [s]
-			reviewMode = True
-		elif qType == 's':
+		title = ''
+		if qType == 's':
 			return self.configEdit()	#config.json file edit, no rslt
 		elif qType == 'u':
 			return self.updateReviewHistory()	#update reviewHistory file, no rslt
@@ -710,6 +553,9 @@ function getDataList()
 			for s in possibles:
 				if self.songDict[s]["RN"] > str(self.today) and self.songDict[s]["RN"] <= newDate:
 					rslt.append(s)
+		elif qType == "m":				#import from another repository
+			utils.writeLog(f"Songs.py.getSongs, inputString is {q}")
+			rslt = []
 		else:
 			title = f"Songs with tag {self.config['tagCtgs'][qType]['title']}: {k}: " 
 			rslt = self.sortByTitle(self.tagDict[qType][k])		#tag search
@@ -783,69 +629,6 @@ function getDataList()
 		mm = int(dateIn[5:7])
 		dd = int(dateIn[8:])
 		return datetime.date(yy, mm, dd)
-	def metronomeButton(self, s, editScreen):
-		utils.writeLog("metronomeButton called, this is now deprecated")
-		# if editScreen == "Y":
-		# 	cls = "pnlButton"
-		# else:
-		# 	cls = "listText bgButton"
-		# return self.makeButton(self.constants["icons"]["tempo"], f'activateMetronome("{editScreen}{s}{bpm}{noteRes}{meter}")', f"{cls}", f"tempoButton{s}", "", f"Play metronome {bpm} bpm") 
-	def compactDate(self, dateIn):
-		return dateIn[2:4] + dateIn[5:7] + dateIn[8:]
-	def elapsedDaysSinceReview(self, s):
-		#calculate days since last review, return 0 if never reviewed before
-		elapsedDays = 0
-		elapsedString = ''
-		if self.songDict[s]["RL"] > "":
-			elapsedDays = (self.today - self.calDate(self.songDict[s]["RL"])).days
-		# create fld, based on el, translate days into larger units
-		if elapsedDays > 364:
-			elapsedString = f'({elapsedDays} days, {round(elapsedDays/365, 2)} yrs)'
-		elif elapsedDays > 29:
-			elapsedString = f'({elapsedDays} days, {round(elapsedDays/30, 2)} mos)'
-		elif elapsedDays > 6:
-			elapsedString = f'({elapsedDays} days, {round(elapsedDays/7, 2)} wks)'
-		else:
-			elapsedString = f'({elapsedDays} days)' 
-		return (elapsedDays, elapsedString)
-	def daysSchedFor(self, s):
-		#calculate days between last review and due date (RN - RL)
-		if self.songDict[s]["RL"] > "" and self.songDict[s]["RN"] > "":
-			# utils.writeLog(f'RL is {self.songDict[s]["RL"]} and RN is {self.songDict[s]["RN"]}')
-			return (self.calDate(self.songDict[s]["RN"]) - self.calDate(self.songDict[s]["RL"])).days 
-		return 0
-	def schedulingButtons(self, s, el):
-		td = self.fldEdit("RN", s, "songDetail", "disabled")  
-		rh = f'<tr><td class="songDetail" colspan="2">{td[0]}{td[1]}</td></tr>' 
-		es = self.daysSchedFor(s)
-		ctr = 0
-		buttonDisplay = []
-		for r in self.config["reviewOptions"]:			# r is a list: [display, days]
-			newDate = str(self.today + datetime.timedelta(days = r[1]))
-			if el == r[1] or es == r[1]:
-				style = "songDetail highlight"
-			else:
-				style = "songDetail button"
-			js = f'scheduleAndSave("{newDate}","{r[1]}","{s}"); ' 
-			b = self.makeButton(r[0], js, style, f'b{r[1]}',"", f'{r[1]} days, {newDate}')
-			buttonDisplay.append(f'<td style="text-align: center;">{b}</td>')
-			ctr += 1
-		ctr = 0
-		while ctr < len(buttonDisplay):
-			if ctr < len(buttonDisplay) - 1:
-				rh += f'<tr>{buttonDisplay[ctr]}{buttonDisplay[ctr + 1]}</tr>' 
-				ctr += 2
-			else:
-				rh += f'<tr>{buttonDisplay[ctr]}</tr>' 
-				ctr += 1
-		# b = self.makeButton('Review and set', f'customDate("{str(self.today)}")', 'songDetail button', 'custReview', '', 'Review and set next review date')
-		# rh += f'<tr><td colspan="2">{b}</td></tr>'
-		# b = self.makeButton('Set (no review)', 'customDate("")', 'songDetail button', 'custReview', '', 'Reschedule without review')
-		# rh += f'<tr><td colspan="2">{b}</td></tr>'
-		revNote = f'<input placeholder="review note" type="text" class="songDetail" size="20" name="revNote" id="revNote" value="">'
-		rh += f'<tr><td colspan="2" style="text-align: center; ">{revNote}</td></tr>' 
-		rh = f'<table border=1>{rh}</table>'
-		return rh
 	def getCannedLabel(self, l, editScreen, fileName):
 		def getClass():
 			if editScreen == "Y":
@@ -912,7 +695,7 @@ function getDataList()
 		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="listItem">{t[1:]}</a>{hover}</div>'
 	def newChangeRec(self):
 		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
-		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": False}
+		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": []}
 		for u in self.config["userFields"]:
 			changeRec[u] = []
 		return changeRec
@@ -928,6 +711,7 @@ function getDataList()
 				return True
 		return False
 	def addReviewRecord(self, rec):
+		# utils.writeLog(f"addReviewRecord, rec is {rec}")
 		fName = revs = ''
 		try:
 			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], "reviewTrigger")	
@@ -943,25 +727,22 @@ function getDataList()
 			utils.writeLog(f'ERROR in trigger file recReview: {e}' )
 			rc = 'ERROR'
 		return rc
-	def recReview(self, s, revNote, changeRec, RL, RN):
-		# utils.writeLog(f"recReview: RN is {RN}, RL is {RL}, s is {s}, revNote is {revNote}")
+	def recReview(self, rev):
+		rev["songTitle"] = self.songDict[rev["songId"]]["TT"]
 		rc = ''
 		try:
-			if s == '':
+			if rev["songId"] == '':
 				return "Error writing review record"
 			rec = {}
-			rec["I"] = s
+			rec["I"] = rev["songId"]
 			rec["D"] = str(self.today)
 			#elapsed time between RL and RN
-			if RL > "" and RN > "":
-				rs = (self.calDate(RN) - self.calDate(RL)).days
+			if rev["RL"] > "" and rev["RN"] > "":
+				rs = (self.calDate(rev["RN"]) - self.calDate(rev["RL"])).days
 				if rs > 0:
 					rec["S"] = rs
-			#utils.writeLog('scheduled days is {}'.format(rec["S"]))
-			if revNote > '':
-				rec["N"] = revNote
-			if self.changedRec(changeRec):
-				rec["C"] = changeRec
+			if rev["revNote"] > '':
+				rec["N"] = rev["revNote"]
 			# record will be written to reviewTrigger.json
 			rc = self.addReviewRecord(rec)
 		except Exception as e:
@@ -1288,6 +1069,7 @@ function getDataList()
 		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A"}
 # s = Songs('106932376942135580175', 'Oalex', '')
 # s = Songs('106932376942135580175', 'Omarie', '')
+# s.processInput({'oper': 'E03B', 'songId': '03B', 'action': '', 'RN': '2023-12-14', 'revNote': '', 'RL': '2023-11-14', 'type': 'edit', 'TG': [{'action': 'd', 'key': 'GFilm'}], 'LL': [], 'SB': [], 'TT': 'Somewhere Over the Rainbow', 'DK': '0', 'NT': "[KEYI G, KEYO G, TYP I, PTN M, BPM 086, RES 2, MTR ABBB]\r\nGs2 G Gs2 G Gs2 G Gs2 G \r\nD7s4 D7 D7s4 D7 D7s4 D7 D7s4 D7\r\n[TYP V, PTN MT]\r\nGs2 G Gs2 G Gs2 G Gs2 G Bm\r\nSome-       where       over the rainbow\r\nC      Gs2  G GM7 G7  \r\nWay up high\r\nC       Cm G/D         E7   \r\nThere's a  land that I heard of\r\nA7        D7s4 D7 D7s4 D7 G Gs2 G Gs2 G  \r\nOnce in a lul-    la-     by\r\n[TYP V]\r\nD7s4 D7 D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G Bm\r\n             Oh some        where       over the rainbow\r\nC         Gs2 G Gs2 G Gs2 G Gs2 G \r\nSkies are blue\r\nC   Cm  G/D             E7 \r\nAnd the dreams that you dare to\r\nA7           D7s4 D7 D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G  \r\nDream really do      come    true\r\n[TYP B]\r\n    Gs2 G    Gs2  G Gs2 G Gs2  G\r\nSomeday I'll wish upon  a star and\r\nD7s4 D7 D7s4  D7  D7s4   D7  \r\nWake up where the clouds are \r\nD7s4 D7 Gs2 G Gs2 G Gs2 G Gs2  G \r\nfar  be hind      me\r\nD7s4 D7 D7s4  D7  D7s4   D7  D7s4 D7 \r\n                             Where \r\nGs2 G    Gs2  G    Gs2 G   Gs2   \r\ntroubles melt like le  mon drops\r\nG F#7s4 F#7 F#7s4 F#7 F#7s4 F#7 F#7s4 \r\na way   a   bove  the chim  ney tops\r\nF#7    Bm    BmM7/A# Am7  D7 D7+5\r\nThat's where you'll  find me\r\n[TYP V]\r\nGs2 G Gs2 G Gs2 G Gs2 G Bm\r\nSome        where       over the rainbow\r\nC         Gs2 G Gs2 G Gs2 G Gs2 G \r\nBluebirds fly\r\nC     Cm  G/D      E7 \r\nBirds fly over the rainbow\r\nA7          D7s4 D7   D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G  \r\nWhy then oh why  can't        I\r\n[TYP O]\r\nD7s4 D7 D7s4 D7 Gs2  G  Gs2  G   Gs2  G     Gs2 \r\n        If      Hap- py lit- tle blue birds fly \r\nG  D7s4 D7  D7s4 D7   Am7  G#dim7 Am7  D7    Eb9 G\t\t\r\nBe-yond the rain-bow, why, oh     why, can't I\t\t\r\n\r\n\r\n\r\n", 'TM': '116'})
 # s.jsFunctions()
 # s.adminEdit()
 # s = Songs('106932376942135580175', 'Olucas', '')
