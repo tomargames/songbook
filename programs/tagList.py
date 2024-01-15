@@ -1,6 +1,7 @@
 #!python
 """
 Created on Tuesday September 27 2019 by tomar
+deprecated on 2023-10-20 -- NO LONGER USED, replaced by js process addTag(ctg)
 #!/usr/bin/python
 #!python
 this gets called to populate category tags in the input box for new tags

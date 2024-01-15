@@ -29,13 +29,14 @@
     "H" : "Hidden"
   },
   "metaKeywords": {
-    "KEYI": "Key center for the source chords",
-    "KEYO": "Key center to render the chart in",
-    "PTN": "Defaults to M(usic)T(ext)",
-    "TYP": "Set type, must be a chartSetType value",
-    "BPM": "Beats per minute for metronome",
-    "RES": "Type note resolution for metronome, 0 for 16th, 1 for 8th, 2 for quarter",
-    "MTR": "Describes a measure in RES units"
+    "KEYI": {"lvl": "song", "desc": "Key center for the source chords"},
+    "KEYO": {"lvl": "song", "desc": "Key center to render the chart in"},
+    "PTN": {"lvl": "set", "desc": "Defaults to M(usic)T(ext)"},
+    "DSP": {"lvl": "set", "desc": "Defaults to 1, smallest font"},
+    "TYP": {"lvl": "set", "desc": "Set type, must be a chartSetType value"},
+    "BPM": {"lvl": "song", "desc": "Beats per minute for metronome"},
+    "RES": {"lvl": "set", "desc": "Type note resolution for metronome, 0 for 16th, 1 for 8th, 2 for quarter"},
+    "MTR": {"lvl": "set", "desc": "Describes a measure in RES units"}
   },
   "chartRowTypes": {
     "M": "chord",
@@ -68,6 +69,7 @@
     "timer": "⌛",
     "stop": "🛑",
     "save": "💾",
+    "wand": "🪄",
     "like": "👍"
   },
   "metronomeNoteResolution": {
@@ -80,6 +82,22 @@
       "title": "Average Song Reviews per Session by Month",
       "columns": ["YYYY-MM", "Reviews", "Sessions", "Avg Rev/Session"]
     }
+  },
+  "options": { 
+      "ACTIONS": [
+        {"val": "DUE", "type": "O", "desc": "List All Due"},
+        {"val": "ADD", "type": "O", "desc": "Add New Card"},
+        {"val": "ADV", "type": "O", "desc": "Review Ahead"},
+        {"val": "REV", "type": "O", "desc": "List Reviewed Today"},
+        {"val": "RVD", "type": "O", "desc": "List Reviewed by Date"},
+        {"val": "INA", "type": "O", "desc": "List Inactive"},
+        {"val": "RPT", "type": "O", "desc": "Reports Menu"},
+        {"val": "UPD", "type": "O", "desc": "Update Review History"}
+      ], 
+      "SETTINGS": [
+        {"val": "ADM", "type": "O", "desc": "Admin"},
+        {"val": "SET", "type": "U", "desc": "Display Preferences"}
+      ]
   }
 }
 
