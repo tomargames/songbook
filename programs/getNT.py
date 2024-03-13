@@ -16,7 +16,6 @@ import utils
 
 form = cgi.FieldStorage() # instantiate only on cccc ce!
 g = form.getvalue('g','106932376942135580175')		#remove default
-d = form.getvalue('d', '111111')
 r = form.getvalue('r', 'Omarie')					#remove default
 inp = form.getvalue('inp', "09Omarie")
 root = os.environ['ToMarRoot']
@@ -25,7 +24,7 @@ print("Content-type: text/html \n")
 try:
 	key = inp[0:3]
 	repos = inp[3:]
-	sb = Songs.Songs(g, f"U{repos}", d)
+	sb = Songs.Songs(g, f"U{repos}")
 	# utils.writeLog(f"Instantiated Songs with 'U{repos}' for key {key}")
 except Exception as e:
 	print(f'error instantiating songbook: {e}')

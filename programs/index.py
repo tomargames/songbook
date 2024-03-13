@@ -34,7 +34,6 @@ name = form.getvalue('gName', '')	#remove default
 gMail = form.getvalue('gMail', '')	#remove default
 gImg = form.getvalue('gImage', '')	#remove default
 oper = form.getvalue('oper','')
-decks = form.getvalue('decks','')
 rr = form.getvalue('rr','')
 
 # if there's a repository coming in, put it in the title
@@ -56,11 +55,7 @@ print(f'''
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 </head>
 <body onload="loadJs('x');">
-<script>
-	var schdSelect = ''; 
-</script>
 ''')
-
 print(f'''
 <form name="gForm" method="POST" action="#">
 <input type="hidden" name="gId" value="{gid}">
@@ -68,9 +63,9 @@ print(f'''
 <input type="hidden" name="gMail" value="{gMail}">
 <input type="hidden" name="gImage" value="{gImg}">
 <input type="hidden" name="oper" value="">
-<input type="hidden" name="decks" value="{decks}">
 <input type="hidden" name="rr" value="{rr}">
 <input type="hidden" name="RL" value="{str(datetime.date.today())}">
+<input type="hidden" name="CS">
 <div id="myModal" class="modal">
   <!-- Modal content for report display -->
   <div class="modal-content">
@@ -100,10 +95,8 @@ if rr == '':									# if first time in, get from cookie
 	print('''
 		<script>
 			rr = getFromLocal('songBookRR');
-			dd = getFromLocal('songBookDD');
 			if (rr > '')
 			{
-				document.gForm.decks.value = dd;
 				document.gForm.rr.value = rr;
 				document.gForm.submit();
 			}
@@ -118,10 +111,10 @@ else:
 		print(authS[1])					#banner html
 		print('<div id="app">')
 		try:
-			sb = Songs.Songs(gid, rr, decks)
+			sb = Songs.Songs(gid, rr)
 			#print('opened sb, oper is {}, decks is {}, rr is {}, '.format(oper, decks, rr))
 		except Exception as e:
-			print(f'admin file error: gid={gid}, rr={rr}, decks={decks}, error={e}')
+			print(f'admin file error: gid={gid}, rr={rr}, error={e}')
 		else:
 			# utils.writeLog(f'index.py: oper is {oper}')
 			rev = {"oper": oper, "songId": "", "action": ""}
@@ -195,7 +188,7 @@ else:
 							f = form.getvalue(f'TYP{i}', '')
 							if f > '':
 								rev[f].append({"action": "a", "key": form.getvalue(f'LBL{i}', ''), "value": form.getvalue(f'VAL{i}', '')})
-						for f in ['TT', 'DK', 'NT'] + list(sb.config["userFields"]):				#single value fields
+						for f in ['TT', 'DK', 'NT', 'CS'] + list(sb.config["userFields"]):				#single value fields
 							rev[f] = form.getvalue(f,'')
 						try:
 							# utils.writeLog(rev)
@@ -205,7 +198,7 @@ else:
 					else:
 						utils.writeLog(f"no action, unrecognized oper code, rev is {rev}")
 				#response will send stuff back, then
-				sb = Songs.Songs(gid, rr, decks)
+				sb = Songs.Songs(gid, rr)
 			renderHtml(sb.jsFunctions(rev))
 			renderHtml('<div id="searchResults"></div>')	
 		print('</div>')
