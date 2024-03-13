@@ -1,21 +1,31 @@
 function $(x) {
 	return document.getElementById(x);
-}	
+}
 function loadJs(x)
 {
 	sessionStorage.setItem('lastSortedCol', -1);
 	var CHrec, SBlist, dialog;
-	SBdata["role"] = getFromLocal('songBookRR').substring(0, 1);
-	SBdata["repository"] = getFromLocal('songBookRR').substring(1);
+	let rr = getFromLocal('songBookRR');
+	if (rr == null) {
+		rr = document.gForm.rr.value;
+		if (rr == null) {
+			rr = SBdata["roleList"][0];
+		}	
+	}
+	SBdata["role"] = rr.substring(0, 1);
+	SBdata["repository"] = rr.substring(1);
 	SBdata["deckString"] = getFromLocal('songBookDD');
 	SBdata["CHcols"] = getFromLocal('songBookCols');
 	SBdata["CHlines"] = getFromLocal('songBookRows');
+	if (SBdata["role"] == 'O') {
+		SBdata["songBookDueRange"] = getFromLocal('songBookDueRange');
+	}	
 	SBdata["metronomeStatus"] = "off";
-	console.log(SBdata);
-	// initialize metronome
-	initMetronome();
-	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);	
-	if (SBdata["CHcols"] == null || SBdata["CHlines"] == null) {
+	if (SBdata["deckString"] == null) {
+		SBdata["deckString"] = "11111111";
+		localStorage.setItem("songBookDD", "11111111");
+	}
+	if (SBdata["CHcols"] == null || SBdata["CHlines"] == null || (rr[0] == "O" && SBdata["songBookDueRange"] == null)) {
 		alert("Set the rows and columns for chart display on this device.");
 		settingsDialog();
 	}
@@ -106,8 +116,12 @@ function loadJs(x)
 		cell.appendChild(document.createElement("br"));
 		cell.appendChild(document.createTextNode(`Rev: ${SBdata["config"]["decks"][deck]["rev"].length}`))
 	});
+	// console.log(SBdata);
+	// initialize metronome
+	initMetronome();
+	// alert("audioContext is " + audioContext + ", timerWorker is " + timerWorker);	
 	if (SBdata["role"] == 'O') {
-		doSearch('x' + formatNumber(getFromLocal("songBookDueRange"), 4));					// songs that are due as of today minus dueRange
+		doSearch('x' + formatNumber(SBdata["songBookDueRange"], 4));					// songs that are due as of today minus dueRange
 	} else {
 		doSearch("D0")					// songs in 0 deck
 	}
@@ -253,7 +267,6 @@ function revAction() {
 			//this is a role, and you need to set it and reload the page
 			document.gForm.rr.value = j;
 			saveLocal('songBookRR', j)
-			document.gForm.decks.value = '';
 			document.gForm.submit();
 		}
 		$("RA").value = '';
@@ -338,19 +351,29 @@ function settingsDialog() {
 	form.childNodes[0].addEventListener("click", (event) => {
 		let cols = ($("chartColumns").value) * 1;
 		let rows = ($("chartRows").value) * 1;
-		let dueRange = ($("dueRange").value) * 1;
+		let dueRange = 0;
+		if (SBdata["role"] == "O") {
+			dueRange = ($("dueRange").value) * 1;
+		}
 		if (cols > 0 && cols < 9) {
 			saveLocal("songBookCols", cols);
+			SBdata["CHcols"] = cols;
 		} else {
 			alert("Columns should be a number from 1 to 4");
 		}
 		if (rows > 0 && rows <= 999) {
 			saveLocal("songBookRows", rows);
+			SBdata["CHlines"] = rows;
 		} else {
 			alert("Rows should be a number from 1 to 999");
 		}
 		if (SBdata["role"] == "O") {
-			saveLocal("songBookDueRange", dueRange);
+			if (dueRange >= 0 && dueRange < 999) {
+				saveLocal("songBookDueRange", dueRange);
+				SBdata["songBookDueRange"] = dueRange;
+			}
+		} else {
+			alert("Maximum days overdue should be a number from 0 to 999");
 		}
 		event.preventDefault();
 		dialog.close();
@@ -369,12 +392,19 @@ function toggleDiv(id)
 		div.style.display = 'block'
 	}
 }
-function fixSpecialCharacters(str)
-{
-	str = str.replaceAll('#', 'Q');
+function reapplySpecialCharacters(strIn) {
+	let str = strIn.toString().replaceAll('aug', '+');
+	str = str.replaceAll('dim', '°');
+	str = str.replaceAll('hd', '"ø"');
+	return str
+}
+function fixSpecialCharacters(strIn) {
+	let str = strIn.toString().replaceAll('#', 'Q');
 	str = str.replaceAll('+', 'aug');
 	str = str.replaceAll('°', 'dim');
 	str = str.replaceAll('↩️', 'crlf');
+	str = str.replaceAll('’', "'");
+	str = str.replaceAll('‘', "'");
 	return str;
 }
 function createDiv(id, className) {
@@ -525,19 +555,20 @@ function displayChartLine(set, line, lineIndex, setTable) {
 		let lineSeq = SBdata["constants"]["chartRowSequence"].split('');
 		lineSeq.forEach((code) => {
 			if (set["meta"]["PTN"].includes(code)) {
-				row = lineTable.insertRow();
+				let row = lineTable.insertRow();
 				set["lines"][lineIndex].forEach((cell, cellIndex) => {
 					if (code == "M") {
-						if (cell.M == 0 || SBdata["musicConstants"]["tokens"].includes(cell.M)) {
-							addTDtoTRnode(displayChord(cell.M), row);
+						let chordCode = reapplySpecialCharacters(cell["M"]);
+						if (chordCode == 0 || SBdata["musicConstants"]["tokens"].includes(chordCode)) {
+							addTDtoTRnode(displayChord(chordCode), row);
 						} else {
-							let inv = cell["M"].indexOf("i");
+							let inv = chordCode.indexOf("i");
 							let cPart, bPart;
 							if (inv > -1) {				// this is an inversion, split it into cPart and bPart
-								cPart = cell.M.slice(0, inv);
-								bPart = parseInt(cell["M"].slice(inv + 1));
+								cPart = chordCode.slice(0, inv);
+								bPart = parseInt(chordCode.slice(inv + 1));
 							} else {
-								cPart = cell.M;
+								cPart = chordCode;
 								bPart = -1;
 							}
 							let chordInfo = {"chord": SBdata["codeDB"][cPart][key], "symbol": SBdata["codeDB"][cPart]["symbol"]};
@@ -605,20 +636,17 @@ function newBorderedTable(border=true) {
 	}
 	return tbl
 }
-function saveChart(arg) {
-	let xhttp = new XMLHttpRequest();
-	xhttp.onreadystatechange = function() {
-		if (this.readyState == 4 && this.status == 200) {
-			CHrec["errors"].push({"sev": 0, "line": "", "txt": "Chart file save returned:", "msg": this.responseText});
-			displayMessages();
-		}
-	};
-	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
-	let r = document.gForm.rr.value;
-	let inp = JSON.stringify(CHrec);
-	xhttp.open("POST", "CHmgr.py?s=" + arg + "&g=" + g + "&d=" + d + "&r=" + r + "&inp=" + inp, true);
-	xhttp.send();
+async function saveChart(s) {
+	const requestData = new URLSearchParams({"s": s, "g": document.gForm.gId.value, "r": document.gForm.rr.value, "inp": JSON.stringify(CHrec)});
+	const requestOptions = {method: 'POST', headers: {'Content-Type': 'application/x-www-form-urlencoded'}, body: requestData.toString()};
+	let chartStatus;
+	const data = await fetch('CHmgr.py', requestOptions)
+  		.then(response => response.text())
+		.then(data => {
+			chartStatus = parseInt(data.trim());
+			})
+		.catch(error => console.error('Error:', error))
+	return chartStatus;
 }
 function showChart(arg) {
 	SBdata["metronomeStatus"] = "off";
@@ -638,10 +666,9 @@ function showChart(arg) {
 		}
 	};
 	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
 	// console.log(inp);
-	xhttp.open("POST", "CHmgr.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r + "&inp=get", true);
+	xhttp.open("POST", "CHmgr.py?s=" + s + "&g=" + g + "&r=" + r + "&inp=get", true);
 	xhttp.send();
 }
 function copyChart(argument) {
@@ -653,18 +680,18 @@ function copyChart(argument) {
 		}
 	};
 	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
-	xhttp.open("POST", "getNT.py?g=" + g + "&d=" + d + "&r=" + r + '&inp=' + argument, true);
+	xhttp.open("POST", "getNT.py?g=" + g + "&r=" + r + '&inp=' + argument, true);
 	xhttp.send();
 }
-function buildCHrec() {
+async function buildCHrec() {
 	// turn editFlag on in sessionStorage
 	// check for valid chart input, starting with a metaLine
-	sessionStorage.setItem("editFlag", true);
+	$("messageArea").innerHTML = "Converting input to chart...";
 	CHrec["errors"] = [];
 	CHrec["sets"] = [];
-	let ntInput = $("NT");
+	CHrec["CHcnv"] = {"0": {"name": " "}, "|": {"name": "|"}, ":": {"name": ":"}, "?": {"name": "?"}};
+	let ntInput = $("NT");	
 	let sourceLines = (ntInput.value).split("\n");
 	let sourceLineIndex = CHrec["linesInColumn"] = 0;
 	CHrec["currentSetIndex"] = -1;
@@ -732,13 +759,13 @@ function buildCHrec() {
 						}
 					} else if (chordInProgress > '') {
 						// translate the chord to chord code before storing
-						lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex);
+						lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"]);
 						chordInProgress = '';
 					} 
 					charIndex += 1;
 				}
 				if (chordInProgress > '') {
-					lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex);
+					lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"]);
 				}
 				if (lineCells[0]["start"] > 0) { // there's a pick-up, put a blank cell in at the start
 					lineCells.unshift({"start": 0, "M": 0});
@@ -768,19 +795,20 @@ function buildCHrec() {
 			}
 		}
 	}
-	// console.log(CHrec);
+	let chartStatus = await saveChart(CHrec["id"]);
 	if (!errorFlag) {
-		saveChart(CHrec["id"]);
-	} else {
-		displayMessages();
-	}
+		CHrec["errors"].push({"sev": 0, "line": "", "txt": "Chart file save returned", "msg": chartStatus});
+	} 
+	sessionStorage.setItem("chartStatus", chartStatus);
+	sessionStorage.setItem("editFlag", true);
+	displayMessages();
 }
-function convertChordToCode(chord, sourceLine, sourceLineIndex) {
+function convertChordToCode(chord, sourceLine, sourceLineIndex, cnvTable) {
 	if (SBdata["musicConstants"]["tokens"].includes(chord)) {
 		return chord;
 	}
 	let slash = chord.indexOf("/");
-	let code, cPart, bPart 
+	let code, cPart, bPart, bCode;
 	if (slash == -1) {
 		cPart = chord;
 		bPart = "";
@@ -789,12 +817,12 @@ function convertChordToCode(chord, sourceLine, sourceLineIndex) {
 		bPart = chord.slice(slash + 1); 
 	}
 	try {
-		code = SBdata["chordDB"][CHrec["meta"]["KEYI"]][cPart]["code"];
+		bCode = code = SBdata["chordDB"][CHrec["meta"]["KEYI"]][cPart]["code"];
 		if (bPart > "") {
 			let found = false;
 			for (let i = 1; i < SBdata["chordDB"][CHrec["meta"]["KEYI"]][cPart]["notes"].length; i++) {
 				if (bPart == SBdata["chordDB"][CHrec["meta"]["KEYI"]][cPart]["notes"][i]) {
-					code = `${code}i${i}`;
+					code = `${bCode}i${i}`;
 					found = true;
 					break;
 				}
@@ -809,6 +837,11 @@ function convertChordToCode(chord, sourceLine, sourceLineIndex) {
 		let message = `Chord ${cPart} not found in chordDB for key ${CHrec["meta"]["KEYI"]}, sending ?`;
 		CHrec["errors"].push({"sev": 0, "line": sourceLineIndex, "txt": sourceLine.slice(0, 15), "msg": message});
 		return "?";
+	}
+	if (!(cPart in cnvTable)) {
+		chordName = SBdata["codeDB"][bCode][CHrec["meta"]["KEYO"]];
+		chordNotes = SBdata["chordDB"][CHrec["meta"]["KEYO"]][chordName]["notes"];
+		cnvTable[bCode] = {"name": chordName, "notes": chordNotes};
 	}
 	return code;
 }
@@ -828,6 +861,7 @@ function showChartIntegrated(setId) {
 	$("NT").disabled = false;
 	let rightPanel = $("rightPanel");
 	sessionStorage.setItem('editRecord', JSON.stringify(SBlist));			// saving the edit screen to put back up when done, don't need if using modal
+	sessionStorage.setItem("screen", "chart");
 	rightPanel.innerHTML = '';
 	let actionBar = createDiv("actionBar", "listText");
 	let messageArea = createDiv("messageArea", "listText");
@@ -838,7 +872,6 @@ function showChartIntegrated(setId) {
 	actionBar.appendChild(createButton("backButton", "chartButton", backButton, SBdata["constants"]["icons"]["close"], "close"));
 	actionBar.appendChild(createButton("tempoButton", "chartButton", playMetronome, SBdata["constants"]["icons"]["tempo"], "start metronome"));
 	actionBar.appendChild(createButton("renderButton", "chartButton", buildCHrec, "Render", "render chart from input"));
-	// buildCHrec();
 }
 function addTextRow(msg, tbl) {
 	let row = tbl.insertRow();
@@ -852,8 +885,6 @@ function createChartPage(e) {				// called when you press + for next chart page
 	CHrec["currentColumnIndex"] = 0;
 	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
 	while (CHrec["currentColumnIndex"] < SBdata["CHcols"]) {
-		// console.log(`top of new column curCol ${CHrec["currentColumnIndex"]}, set ${CHrec["currentSetIndex"]}, line ${CHrec["currentLineIndex"]}, linesInColumn ${CHrec["linesInColumn"]}`)
-		// if (CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["type"] != "Hidden") {  // this doesn't work
 		let setTable = newBorderedTable();												// this holds chart lines
 		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
 		addTDtoTRnode(setTable, row);
@@ -999,9 +1030,8 @@ function showHistory(s)
 		}
 	};
 	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
-	xhttp.open("GET", "getHistory.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r, true);
+	xhttp.open("GET", "getHistory.py?s=" + s + "&g=" + g + "&r=" + r, true);
  	xhttp.send();
 }
 function getSortItem(c, r, rows) {
@@ -1207,9 +1237,8 @@ function saveAdminFile()
 	if (owners > 0)
 	{
 		let g = document.gForm.gId.value;
-		let d = document.gForm.decks.value;
 		let r = document.gForm.rr.value;
-		xhttp.open("POST", "saveAdminFile.py?g=" + g + "&d=" + d + "&r=" + r + "&s=" + sendString, true);
+		xhttp.open("POST", "saveAdminFile.py?g=" + g + "&r=" + r + "&s=" + sendString, true);
 		xhttp.send();
 	}
 	else
@@ -1500,9 +1529,11 @@ function detailLine(rec, tbl) {
 			actionBar.appendChild(createButton(id, "pnlButton", songAction, SBdata["constants"]["icons"]["like"], `Add ${SBlist["songs"][rec]["TT"]} to set`));
 			actionBar.childNodes[0].childNodes[0].style.backgroundColor = clr; // outerDiv is action bar's first child, button is outerDiv's first
 		}
-		if (SBlist["songs"][rec]["CS"] < 2) {
+		if (SBlist["songs"][rec]["CS"] > 0) {
 			actionBar.appendChild(createButton(`lchrt${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Chord chart for ${SBlist["songs"][rec]["TT"]}`));
-			actionBar.appendChild(createButton(`pdf  ${rec}`, "pnlButton", songAction, "pdf", `PDF of chart for ${rec}`, true));
+			if (SBlist["songs"][rec]["CS"] > 2) {
+				actionBar.appendChild(createButton(`pdf  ${rec}`, "pnlButton", songAction, "pdf", `PDF of chart for ${rec}`, true));
+			}
 		}
 		Object.keys(SBlist["songs"][rec]["SB"]).forEach((item) => {
 			let titleInfo = getCannedLabel(item);
@@ -1613,8 +1644,10 @@ function execSearch(s, typ = "L")
 				SBlist = JSON.parse(this.responseText);
 				if (SBlist["title"] == "edit") {
 					sessionStorage.setItem("editRecord", JSON.stringify(SBlist));
+					sessionStorage.setItem("screen", "edit");
 				} else {
 					sessionStorage.setItem("SBlist", JSON.stringify(SBlist));
+					sessionStorage.setItem("screen", "list");
 				}
 				if (typ == "L") { 	// list of songs
 					displaySong();
@@ -1656,9 +1689,8 @@ function execSearch(s, typ = "L")
 	};
 	// need to send s(query), g(gid), and d(deckString)
 	let g = document.gForm.gId.value;
-	let d = document.gForm.decks.value;
 	let r = document.gForm.rr.value;
-	xhttp.open("POST", "srchResults.py?s=" + s + "&g=" + g + "&d=" + d + "&r=" + r, true);
+	xhttp.open("POST", "srchResults.py?s=" + s + "&g=" + g + "&r=" + r, true);
 	xhttp.send();
 }
 function getElapsedDays(date1, date2) {
@@ -1687,7 +1719,6 @@ function getFutureDate(daysToAdd) {
 	newDate.setDate(newDate.getDate() + daysToAdd);
 	return `${newDate.toISOString().substring(0, 10)} (${daysToAdd} days)`;
 }
-
 function displaySong() {
 	let srchResults = $("searchResults");
 	srchResults.innerHTML = "";
@@ -1710,11 +1741,15 @@ function displaySong() {
 	detailHeaderRow(listTable);
 	srchResults.appendChild(listTable);
 	Object.keys(SBlist["songs"]).forEach((item) => {
-		detailLine(item, listTable);
+		let dk = parseInt(SBlist["songs"][item]["DK"]);
+		if (SBdata["deckString"].substring(dk, dk + 1) == "1") {
+			detailLine(item, listTable);
+		}
 	});
 	if (SBlist["title"] == "edit") {
 		let songId = Object.keys(SBlist["songs"]);
 		let rec = SBlist["songs"][songId];
+		document.gForm.CS.value = rec ["CS"];
 		let reviewArea = newBorderedTable(false);
 		srchResults.appendChild(reviewArea);
 		let reviewRow = reviewArea.insertRow();
@@ -1731,13 +1766,16 @@ function displaySong() {
 		leftPanel.appendChild(document.createElement("br"));
 		// replace this panel with scheduling buttons pa
 		let ntInput = leftPanel.appendChild(document.createElement("textArea"));
-		// enableES(ntInput);
+		sessionStorage.setItem("editFlag", false);
 		ntInput.rows = 32;
 		ntInput.cols = 72;
 		ntInput.id = ntInput.name = "NT";
 		ntInput.disabled = true;
 		ntInput.className = "NTinput";
 		ntInput.value = cvtIconToCRLF(rec["NT"]);
+		ntInput.addEventListener("change", (event) => {
+			sessionStorage.setItem("editFlag", true);
+		});
 		rightPanel.className = "songDetail";
 		let actionBar = createDiv("revDiv", "listText");
 		rightPanel.appendChild(actionBar);
@@ -1745,8 +1783,11 @@ function displaySong() {
 		actionBar.appendChild(createButton("saveButton", "pnlButton", songAction, SBdata["constants"]["icons"]["save"], "Save changes", false, true));
 		actionBar.appendChild(createButton(`sched${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule with buttons`));
 		$(`sched${songId}`).style.backgroundColor = 'lightgreen';
-		actionBar.appendChild(createButton(`fchrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart`));
-		if (rec["CS"] < 2) {
+		if (rec["CS"] > 1) {
+			actionBar.appendChild(createButton(`fchrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart`));
+		}
+		actionBar.appendChild(createButton(`echrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["edit"], `Edit chart`));
+		if (rec["CS"] > 2) {
 			actionBar.appendChild(createButton(`pdf  ${songId}`, "pnlButton", songAction, "pdf", `PDF of chart for ${songId}`, true));
 		}
 		(Object.keys(rec["SB"])).forEach ((name) => {
@@ -1757,7 +1798,6 @@ function displaySong() {
 			let titleInfo = getCannedLabel(name);
 			actionBar.appendChild(createButton(`link ${songId}${name}`, "pnlButton", songAction, titleInfo["label"], titleInfo["hover"]));
 		});
-		actionBar.appendChild(createButton(`echrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["edit"], `Edit chart`));
 		actionBar.appendChild(createButton(`histo${songId}`, "pnlButton", songAction, "History", `Review history`));
 		actionBar.appendChild(createButton(`copy ${songId}`, "pnlButton", songAction, "Copy", `Copy song information`));
 		actionBar.appendChild(createButton(`cance${songId}`, "pnlButton", songAction, "Cancel", `Cancel edit`));
@@ -1771,8 +1811,6 @@ function displaySong() {
 				actionBar.appendChild(createButton(`imp  ${songId}${role.substring(1)}`, "pnlButton", songAction, role.substring(1), `Copy chart from ${role.substring(1)}`));
 			}
 		});
-
-
 		// reviewArea
 		// first row is title and deck
 		let titleAndDeck = createDiv("row1", "listText");
@@ -1868,7 +1906,7 @@ function displaySong() {
 		rn.value = rec["RN"];
 		enableES(rn);
 		addTDtoTRnode(rn, infoRow);
-		["RL", "CD", "RT", "RA", "CS"].forEach((item) => {
+		["RL", "CD", "RT", "RA"].forEach((item) => {
 			infoRow = infoTable.insertRow();
 			addTDtoTRtext(`${SBdata["constants"]["fields"][item]["title"]}: `, infoRow, "songDetail");
 			if (item != "RL") {
@@ -1986,10 +2024,12 @@ function cancelEdit() {
 	sessionStorage.removeItem("editRecord");
 	displaySong();
 }
-function backButton(e) {
+function clearMetronomeAndTimer(e) {
+	if (e != null) { e.preventDefault(); }	
 	clearInterval(CHrec["interval"]);				// if timer was on, turn it off
 	if (SBdata["metronomeStatus"] ==  "on") {
 		play();				// turn metronome off
+		SBdata["metronomeStatus"] = "off";
 	}
 	if (CHrec["elapsed"] > 0) {
 		if (confirm(`Saved time is ${document.gForm.TM.value}. Save updated time of ${CHrec["elapsed"]}?`)) {
@@ -1997,16 +2037,39 @@ function backButton(e) {
 			enableSave(e);
 		}
 	}
+}
+function backButton(e) {
+	clearMetronomeAndTimer(e);
 	// alert("in backButton, metronomeStatus is " + metronomeStatus + ", elapsed is " + CHrec["elapsed"]);
-	$('chartModal').style.display = "none";
-	if (sessionStorage.getItem('editRecord') != null) {
-		let NTinput = $('NT').value;
-		displaySong();
-		$('NT').value = NTinput;
+	if (sessionStorage.getItem('screen') == "chart") {
 		if (sessionStorage.getItem("editFlag") == 'true') {
+			let NTinput = $('NT').value;
+			displaySong();
+			$('NT').value = NTinput;
+			if (sessionStorage.getItem("chartStatus") != null) {
+				let oldValue = document.gForm.CS.value;
+				let newValue = sessionStorage.getItem("chartStatus")
+				document.gForm.CS.value = newValue;
+				if (newValue > oldValue) {
+					let actionBar = $("revDiv");
+					let songId = Object.keys(SBlist["songs"])
+					if (newValue >= 2) {
+						actionBar.appendChild(createButton(`pdf  ${songId}`, "pnlButton", songAction, "pdf", `PDF of chart for ${songId}`, true));
+						if (newValue == 3) {
+							actionBar.appendChild(createButton(`fchrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart`));
+						}
+					}
+				}
+				sessionStorage.removeItem("chartStatus");
+			}
 			enableSave();
 			sessionStorage.removeItem("editFlag");
+		} else {
+			displaySong();
 		}
+		sessionStorage.setItem("screen", "edit");
+	} else {
+		$('chartModal').style.display = "none";
 	}
 	if (e != null) { e.preventDefault(); }	
 }

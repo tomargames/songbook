@@ -13,7 +13,6 @@ import urllib
 import datetime
 import re
 from operator import itemgetter
-from fpdf import FPDF
 sys.path.append("../../tomar/programs/")
 import utils
 import Users
@@ -46,7 +45,8 @@ class Songs(object):
 	#check gid against admin file
 	#init establishes the owner of the file, and status of user (owner/user)
 	#if user owns a file, but it a user of filed owned by someone else
-	def __init__(self, gid, rr, deckString):
+	# def __init__(self, gid, rr, deckString):
+	def __init__(self, gid, rr):
 		self.root = os.environ['ToMarRoot']
 		self.appFolder = getAppFolder()
 		fileName = os.path.join(self.root, self.appFolder, 'data', 'admin.json')		# songbook admin file
@@ -72,14 +72,15 @@ class Songs(object):
 			if gid in self.reposDict[u]["U"]:			# user role
 				self.roleList.append(f'U{u}')
 		users = Users.Users()			# object containing userDict of users of ToMarGames
-		self.errors = []
 		self.appUsers = users.getAppUsers(users.SONGBOOK)
 		self.user = gid
 		if self.rr in self.roleList:	#if self.rr is in that list, keep it and move on
-			self.loadData(deckString)
+			# self.loadData(deckString)
+			self.loadData()
 		elif len(self.roleList) > 0:	# otherwise, grab the first one
 			self.rr = self.roleList[0]
-			self.loadData(deckString)
+			self.loadData()
+			# self.loadData(deckString)
 		else:
 			raise Exception(f'user not found for {gid}, ask marie to set you up')
 	def songLink(self, s):
@@ -90,12 +91,10 @@ class Songs(object):
 		songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
 		title = f'''<span class="hoverText songInfo"><b>ID: </b>{s}<br> <b>Due:</b> {self.songDict[s]['RN']}<br> <b>Last:</b> {self.songDict[s]['RL']}<br><b>Created:</b> {self.songDict[s]['CD']}<br> <b>Total:</b> {self.songDict[s]['RT']}<br> <b>Avg:</b> {self.songDict[s]['RA']}</span>'''
 		display = f'''<div class=hoverContainer><a class=listItem href=javascript:doSearch("{type}{s}");>{songTitle}</a>{title}</div>'''
-		# utils.writeLog(f'display is {display}')
 		return display
-		# return f'<a title="{title}" href=javascript:doSearch("o{s}"); class="listText">{self.songDict[s]["TT"]}</a>'
-	def notesFormat(self, note):
-		# all line breaks will turn into ||| for transmission
-		return re.sub('\\r\\n', "↩️", note)
+	# def notesFormat(self, note):
+	# 	# all line breaks will turn into ↩️ for transmission
+	# 	return re.sub('\\r\\n', "↩️", note)
 	def getField(self,f):
 		if f in self.constants["fields"]:
 			return self.constants["fields"][f]
@@ -123,17 +122,17 @@ class Songs(object):
 			rev["action"] = e
 		return rev
 	def processInput(self, rev):
-		# utils.writeLog(f'Songs.py.processInput, rev is {rev}')
+		# utils.writeLog(rev)
 		changeRec = self.newChangeRec()
 		if rev["type"] in ["add", "copy"]:
 			self.songDict[rev["songId"]] = self.newSongCard()
-		for f in ['TT', 'DK', "NT", "RN", "RL"] + list(self.config["userFields"]):
+		for f in ['TT', 'DK', "NT", "RN", "RL", "CS"] + list(self.config["userFields"]):
 			if rev[f] != self.songDict[rev["songId"]][f]:
 				self.songDict[rev["songId"]][f] = rev[f]
 				if f not in ["RN", "RL"]:
 					changeRec[f].append({"old": self.songDict[rev["songId"]][f], "new": rev[f]})
 					rev.pop(f)
-		# utils.writeLog(f'1 changeRec is {changeRec}, rev is {rev}')		
+		# utils.writeLog(f'rec is {self.songDict[rev["songId"]]}')		
 		for t in rev["TG"]:
 			if t["action"] == "a":
 				self.songDict[rev["songId"]]["TG"].append(t["key"])
@@ -175,7 +174,7 @@ class Songs(object):
 					rev["action"] = f'Error saving record: {self.songLink(rev["songId"])}'
 					utils.writeLog(f'Error on save, rev = {rev}')
 				else:
-					# utils.writeLog(f"writing review record for {s}")	
+					# utils.writeLog(f"writing review record for {rev['songId']}")	
 					try:
 						if self.recReview(rev) != 'good':
 							rev["action"] = f'Record saved, error writing review record for {self.songLink(rev["songId"])}' 
@@ -185,69 +184,62 @@ class Songs(object):
 						utils.writeLog(f'Exception in recReview on song {rev["songId"]}: {e}' )
 						rev["action"] = e
 		rev["songTitle"] = self.songDict[rev["songId"]]["TT"]
+		# utils.writeLog(f"returning {rev}")
 		return rev
-	def addLyric(self, curSet, lines, curLine, start, end):
-		if 'T' in curSet["meta"]["PTN"]:
-			curSet["lines"][-1][-1]["T"] = lines[curLine + 1][start: end].rstrip()
-		return False
+	# def addLyric(self, curSet, lines, curLine, start, end):
+	# 	if 'T' in curSet["meta"]["PTN"]:
+	# 		curSet["lines"][-1][-1]["T"] = lines[curLine + 1][start: end].rstrip()
+	# 	return False
 	def notationCleanUp(self, chord):
 		for c in self.musicConstants["chordNotation"]:
 			chord = re.sub(c, self.musicConstants["chordNotation"][c]["replace"], chord)
 		return chord
-	def getCodeFromChordDB(self, chord, key):
-		if chord == '0':
-			return '0'
-		slash = chord.find('/')
-		if slash > -1: 					# this is an inversion -- work on the chord part and put it back together afterward
-			cPart = self.findChordInDB(chord[0:slash], key)
-			if cPart == "?":
-				return cPart
-			bPart = chord[slash + 1:]
-			code = f"{cPart}i"
-			for i in range(len(self.chordDB[key][chord[0:slash]]["notes"])):
-				if bPart == self.chordDB[key][chord[0:slash]]["notes"][i]:
-					return f'{code}{i}'
-			self.errors.append(f'returning ? for {chord} in key {key}, inversion error')
-			return '?'
-		else:
-			return self.findChordInDB(chord, key)
-	def findChordInDB(self, chord, key):
-		if chord in self.chordDB[key]:
-			return self.chordDB[key][chord]["code"]
-		if chord in self.musicConstants["tokens"]:
-			return chord
-		token = '?'
-		# if len(chord) > 1 and chord[0:2] in ["C#", "Db", "D#", "Eb", "F#", "Gb", "A#", "Bb", "G#", "Ab"]:
-		# 	return self.getAlternateNote(chord, 2, key)
-		# elif chord[0:1] in ["E", "F", "B", "C"]:
-		# 	return self.getAlternateNote(chord, 1, key)
-		# if chord[0] in self.musicConstants["tokens"]:
-		# 	token = chord[0]
-		# else:
-		# 	self.errors.append(f'returning ? for {chord} in key {key}, unknown token {token}')
-		return token
-	def getAlternateNote(self, chord, length, key):
-		note = chord[0:length]
-		pitch = self.musicConstants["notes"][note]
-		for n in self.musicConstants["pitches"][pitch]:
-			if n != note:
-				# toDo: log this as part of the updateReview process
-				if f"{n}{chord[length:]}" in self.chordDB[key]:
-					self.errors.append(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
-					return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
-				else:
-					self.errors.append(f"{n}{chord[length:]} not in {key}, what's going on?")
-		self.errors.append(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
-	def addChord(self, key, chord, curSet):
-		# utils.writeLog(f'addChord for chord {chord}, key {key}')
-		chord = self.notationCleanUp(chord)
-		if chord > '':
-			curSet["lines"][-1].append({})
-			curSet["lines"][-1][-1]["M"] = self.getCodeFromChordDB(chord, key)
-			if "T" in curSet["meta"]["PTN"]:
-				return True
-		return False
-	def loadData(self, deckString):
+	# def getCodeFromChordDB(self, chord, key):
+	# 	if chord == '0':
+	# 		return '0'
+	# 	slash = chord.find('/')
+	# 	if slash > -1: 					# this is an inversion -- work on the chord part and put it back together afterward
+	# 		cPart = self.findChordInDB(chord[0:slash], key)
+	# 		if cPart == "?":
+	# 			return cPart
+	# 		bPart = chord[slash + 1:]
+	# 		code = f"{cPart}i"
+	# 		for i in range(len(self.chordDB[key][chord[0:slash]]["notes"])):
+	# 			if bPart == self.chordDB[key][chord[0:slash]]["notes"][i]:
+	# 				return f'{code}{i}'
+	# 		self.errors.append(f'returning ? for {chord} in key {key}, inversion error')
+	# 		return '?'
+	# 	else:
+	# 		return self.findChordInDB(chord, key)
+	# def findChordInDB(self, chord, key):
+	# 	if chord in self.chordDB[key]:
+	# 		return self.chordDB[key][chord]["code"]
+	# 	if chord in self.musicConstants["tokens"]:
+	# 		return chord
+	# 	token = '?'
+	# 	return token
+	# def getAlternateNote(self, chord, length, key):
+	# 	note = chord[0:length]
+	# 	pitch = self.musicConstants["notes"][note]
+	# 	for n in self.musicConstants["pitches"][pitch]:
+	# 		if n != note:
+	# 			# toDo: log this as part of the updateReview process
+	# 			if f"{n}{chord[length:]}" in self.chordDB[key]:
+	# 				self.errors.append(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
+	# 				return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
+	# 			else:
+	# 				self.errors.append(f"{n}{chord[length:]} not in {key}, what's going on?")
+	# 	self.errors.append(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
+	# def addChord(self, key, chord, curSet):
+	# 	# utils.writeLog(f'addChord for chord {chord}, key {key}')
+	# 	chord = self.notationCleanUp(chord)
+	# 	if chord > '':
+	# 		curSet["lines"][-1].append({})
+	# 		curSet["lines"][-1][-1]["M"] = self.getCodeFromChordDB(chord, key)
+	# 		if "T" in curSet["meta"]["PTN"]:
+	# 			return True
+	# 	return False
+	def loadData(self):
 		### reads input files from data folder for repository
 		### path will be ToMarRoot || songbook/data || self.rr[1:]
 		fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook.json')		# song file
@@ -256,8 +248,6 @@ class Songs(object):
 		fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'config.json')		# song file
 		with open(fileName,'r',encoding='utf8') as cfg:
 			self.config = json.load(cfg)
-		if len(deckString) < len(self.config["decks"]):
-			deckString = "1111111111"[:len(self.config["decks"])]
 		for c in self.config["decks"]:			# add repositories to deckDict[c]
 			self.config["decks"][c]["songs"] = []
 			self.config["decks"][c]["TG"] = []
@@ -275,10 +265,7 @@ class Songs(object):
 		# some fields are automatically there, cfgList[3] will have user-created fields
 		self.tagDict = {}		# typepe: {tag: [id, id, id]}
 		self.today = datetime.date.today()
-		if deckString == '':
-			self.deckString = '111111111111'[0:len(self.config["decks"])]
-		else:
-			self.deckString = deckString
+		self.dataList = []
 		for c in self.songDict:
 			#print('due date for {} is {}'.format(c, self.songDict[c]["RN"]))
 			#title = re.sub("'", "&apos;", self.songDict[c]["TT"])
@@ -289,6 +276,10 @@ class Songs(object):
 				self.config["decks"][self.songDict[c]["DK"]]["inactive"].append(c)
 			elif self.songDict[c]["RN"] <= str(self.today):				#due today
 				self.config["decks"][self.songDict[c]["DK"]]["due"].append(c)
+			if self.rr[0] == "O":		#if user is owner
+				self.dataList.append({"val": f'o{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.songDict[c]["RN"]})  ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+			else:
+				self.dataList.append({"val": f'O{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
 			#for tag filter
 			for t in self.songDict[c]["TG"]:
 				type = t[0:1]
@@ -298,7 +289,8 @@ class Songs(object):
 						self.tagDict[type][tag].append(c)
 					else:
 						self.tagDict[type][tag] = [c]
-					self.config["decks"][self.songDict[c]["DK"]]["TG"].append(t)
+					if t not in self.config["decks"][self.songDict[c]["DK"]]["TG"]:
+						self.config["decks"][self.songDict[c]["DK"]]["TG"].append(t)
 				else:
 					#print("type is {}, tag is {}, c is {}".format(type, tag, c))
 					self.tagDict[type] = {}
@@ -310,6 +302,7 @@ class Songs(object):
 			for tag in sorted(self.tagDict[type]):
 				self.tagDict[type][tag] = sorted(self.tagDict[type][tag])
 				self.tagJs[type][tag] = len(self.tagDict[type][tag])
+				self.dataList.append({"val": encodeHtml(f"{type}{tag}"), "desc": f'{self.config["tagCtgs"][type]["title"]}: {tag} ({len(self.tagDict[type][tag])})'})
 	def jsFunctions(self, rev):
 		# utils.writeLog(f'jsFunctions: rev is {rev}')
 		rh = ''
@@ -320,50 +313,13 @@ class Songs(object):
 		rh += f'SBdata["tagData"] = {json.dumps(self.tagJs)}; '
 		rh += f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; '
 		rh += f'SBdata["roleList"] = {json.dumps(self.roleList)}; '
-		rh += f'SBdata["dataList"] = {json.dumps(self.dataList())}; ' 
+		rh += f'SBdata["dataList"] = {json.dumps(self.dataList)}; ' 
 		rh += f'SBdata["revData"] = {json.dumps(rev)}; ' 
 		rh += f'SBdata["nextSongID"] = "{utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)}"; ' 
 		rh += f'SBdata["codeDB"] = {json.dumps(self.codeDB)}; '
 		rh += f'SBdata["chordDB"] = {json.dumps(self.chordDB)}; '
 		rh += '</script>'
 		return rh
-	def dataList(self):
-		rh = []
-		for s in sorted(self.deckFilter()):
-			if self.rr[0] == "O":		#if user is owner
-				rh.append({"val": f'o{s}', "desc": f'Song: {self.songDict[s]["TT"]} ({self.songDict[s]["RN"]})  ({self.config["decks"][self.songDict[s]["DK"]]["name"]})'})
-			else:
-				rh.append({"val": f'O{s}', "desc": f'Song: {self.songDict[s]["TT"]} ({self.config["decks"][self.songDict[s]["DK"]]["name"]})'})
-		for t in sorted(self.tagFilter()):
-			rh.append({"val": encodeHtml(t), "desc": f'{self.config["tagCtgs"][t[0]]["title"]}: {t[1:]} ({len(self.tagDict[t[0]][t[1:]])})'})
-		return rh
-	def tagList(self, ctg):
-		rh = []
-		for t in sorted(self.tagDict[ctg]):
-			#<option value="AJamesTaylor">Artist: JamesTaylor</option>
-			# rh += f'<option value="{ctg}{encodeHtml(t)}">{self.config["tagCtgs"][ctg]["title"]}: {t}({len(self.tagDict[ctg][t])})</option>' 
-			rh.append({"val": f'{ctg}{encodeHtml(t)}', "desc": f'{self.config["tagCtgs"][ctg]["title"]}: {t}({len(self.tagDict[ctg][t])})'})
-		return rh
-	def deckFilter(self):
-		possibles = []
-		for d in self.decksToInclude():
-			possibles += self.config["decks"][d]["songs"]
-		return noDupes(possibles)
-	def tagFilter(self):
-		possibles = []
-		for d in self.decksToInclude():
-			for p in self.config["decks"][d]["TG"]:
-				if p[0] in self.config["tagOrder"]:
-					possibles.append(p)
-		return noDupes(possibles)
-	def decksToInclude(self):
-		rDecks = []
-		tempDecks = self.deckString[:]
-		for d in sorted(self.config["decks"]):
-			if tempDecks[0] == '1':
-				rDecks.append(d)
-			tempDecks = tempDecks[1:]
-		return rDecks
 	def configEdit(self):
 		### this will display a form that, when saved, will update the config.json file in the repository
 		print('Not coded yet, update config.json to make changes')
@@ -485,7 +441,7 @@ class Songs(object):
 		q is o0250 -- search term
 		'''
 		# utils.writeLog(f"getSongs, coming in with {q}")
-		possibles = self.deckFilter()
+		# possibles = self.deckFilter()
 		reviewMode = False
 		# utils.writeLog(f'Songs.py.getSongs("{q}")')
 		k = q[1:]
@@ -511,14 +467,15 @@ class Songs(object):
 		elif qType == 'i':					#inactive
 			rslt = []
 			title = "Inactive"
-			for s in possibles:
+			# for s in possibles:
+			for s in self.songDict:
 				# if s is in ["due"] for the deck it's in
 				if s in self.config["decks"][self.songDict[s]["DK"]]["inactive"]:
 					rslt.append(s)
 		elif qType == 'e':					#chart error err1 (unrecognized chord)
 			rslt = []
 			title = "Chart err1 errors"
-			for s in possibles:
+			for s in self.songDict:
 				if self.songDict[s]["CS"] == 1:			# if chartStatus (CS) field == 1
 					rslt.append(s)
 		elif qType == 'D':				#deck search
@@ -527,7 +484,8 @@ class Songs(object):
 		elif qType == 'r':				#reviewed today
 			title = f"Songs reviewed today, {str(self.today)}: " 
 			rslt = []
-			for d in self.decksToInclude():
+			# for d in self.decksToInclude():
+			for d in self.config["decks"]:
 				rslt = rslt + self.config["decks"][d]["rev"]
 		elif qType == 'x':				#get due
 			rslt = []
@@ -535,7 +493,7 @@ class Songs(object):
 			days = int(k)
 			newDate = str(self.today - datetime.timedelta(days))
 			title = f'Songs that have been due since {newDate}: ' 
-			for s in possibles:
+			for s in self.songDict:
 				# if s is in ["due"] for the deck it's in
 				if s in self.config["decks"][self.songDict[s]["DK"]]["due"]:
 					if self.songDict[s]["RN"] >= newDate:
@@ -550,7 +508,7 @@ class Songs(object):
 			title = f'Songs coming due in the next {days} days: ' 
 			newDate = str(self.today + datetime.timedelta(days))
 			rslt = []
-			for s in possibles:
+			for s in self.songDict:
 				if self.songDict[s]["RN"] > str(self.today) and self.songDict[s]["RN"] <= newDate:
 					rslt.append(s)
 		elif qType == "m":				#import from another repository
@@ -563,7 +521,7 @@ class Songs(object):
 		resultSet["songs"] = {}
 		resultSet["totalTime"] = 0
 		for s in rslt:
-			if s in possibles: 
+			if s in self.songDict: 
 				resultSet["songs"][s] = self.songDict[s]
 				if not reviewMode:
 					resultSet["songs"][s].pop("NT")				# remove the chart input field, it will not be needed here
@@ -695,7 +653,7 @@ class Songs(object):
 		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="listItem">{t[1:]}</a>{hover}</div>'
 	def newChangeRec(self):
 		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
-		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": []}
+		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": [], "CS":[]}
 		for u in self.config["userFields"]:
 			changeRec[u] = []
 		return changeRec
@@ -763,15 +721,8 @@ class Songs(object):
 				dateFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewDates.json')
 				with open(dateFile,'r',encoding='utf8') as u:
 					revDateDict = json.load(u)
-				chartFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'reviewCharts.json')
-				with open(chartFile,'r',encoding='utf8') as u:
-					revChartDict = json.load(u)
-				chordFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'chordUsage.json')
-				with open(chordFile,'r',encoding='utf8') as u:
-					chordUsageDict = json.load(u)
 				sizeInSong = len(revSongDict)
 				sizeInDate = len(revDateDict)
-				self.errors = []
 				for r in trigList:
 					songId = r["I"]
 					revDate = r["D"]
@@ -783,36 +734,7 @@ class Songs(object):
 						revDateDict[revDate] = []
 					if songId not in revSongDict:
 						revSongDict[songId] = {}
-					#only process CH-related stuff if NT field has changed
-					if "NT" in changeRec and changeRec["NT"] == True:
-						# utils.writeLog(f'making a new chart for {songId}')
-						try:
-							CH = self.createChartRecord(self.songDict[songId]['NT'], songId)
-							if len(CH["sets"]) > 0:
-								# now optimize before saving to reviewCharts file
-								# newRec = self.revChartProcess(CH)
-								revChartDict[songId] = CH
-								# first, remove all references to this songId from chordUsageDict
-								for ch in chordUsageDict:
-									if songId in chordUsageDict[ch]:
-										chordUsageDict[ch].pop(songId)
-								# then, add entries for every chord in the song
-								for s in range(len(CH["sets"])):				# for each set
-									key = CH["sets"][s]["meta"]["KEYO"]
-									for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
-										for c in range(len(CH["sets"][s]["lines"][l])):						# for each cell in the line
-											if CH["sets"][s]["lines"][l][c]["M"] in chordUsageDict:		# if that chord is in the usageDict
-												if songId in chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]]:		# if that song is already there for that chord
-													# utils.writeLog(f"hit the line where it might abend")
-													chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]][songId].append({"set": s, "line": l, "cell": c})
-												else:
-													chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]][songId] = [{"set": s, "line": l, "cell": c}]	# otherwise establish its counter and count it
-											else:
-												chordUsageDict[CH["sets"][s]["lines"][l][c]["M"]] = {songId: {"set": s, "line": l, "cell": c}}	# set up counter for chord and put song in it
-							self.songDict[songId]['CS'] = len(CH["errors"])
-						except Exception as e:
-							utils.writeLog(f'updateReviewHistory ERROR on {songId} {self.songDict[songId]["TT"]}: {e}' )
-						# if this is first record for song/date, insert it as is to both files
+					# 	# if this is first record for song/date, insert it as is to both files
 					if revDate not in revSongDict[songId]:				#first review for this song/date
 						revSongDict[songId][revDate] = r
 						revDateDict[revDate].append(songId)
@@ -866,216 +788,18 @@ class Songs(object):
 					rcb = utils.saveFile(fileName, self.songDict, force=True)			#save songBook file and force backup
 					rcs = utils.saveFile(songFile[:-5], revSongDict, True)		#save songHistory
 					rcd = utils.saveFile(dateFile[:-5], revDateDict, True)		#save dateHistory
-					rcc = utils.saveFile(chartFile[:-5], revChartDict, True)		#save dateHistory
-					rcu = utils.saveFile(chordFile[:-5], chordUsageDict, True)		#save dateHistory
-					message = f'songBook: {rcb}<br> reviewSongs: {rcs}<br> reviewDates: {rcd}<br> reviewCharts: {rcc}<br> chordUsage: {rcu} <br>' 
-					for e in self.errors:
-						message += f'{e}<br>' 
+					message = f'songBook: {rcb}<br> reviewSongs: {rcs}<br> reviewDates: {rcd}<br>' 
 			else:
 				message = 'No updates necessary'
 		else:
 			message = 'No updates necessary'
 		return message
-	def createPDF(self, songId, CH):
-		# create a pdf of the chart, and save it to /data/repos/pdfs/songId.pdf
-		pdf = FPDF()
-		pdf.add_page()
-		pdf.set_author("ToMarGames SongBook")
-		# pdf.add_font('NotoSansMonoExtraBold', '', 'C:\\Users\\tomar\\AppData\\Local\\Microsoft\\Windows\\Fonts\\NotoSansMono-VariableFont_wdth,wght.ttf', uni=True)
-		# pdf.add_font('NotoSansMonoExtraBold', '', 'C:\\Apache24\\tomargames.xyz\\songbook\\js\\NotoSansMono-VariableFont_wdth,wght.ttf', uni=True)
-		pdf.add_font('NotoSansMonoExtraBold', '', '../js/NotoSansMono-VariableFont_wdth,wght.ttf', uni=True)
-		pdf.set_font('NotoSansMonoExtraBold', '', 14)				
-		# pdf.set_font("courier", size = 14, style = 'B')
-		pdf.set_text_color(0, 0, 0)
-		pdf.cell(200, 6, txt = self.songDict[songId]["TT"], ln = 1, align = 'C')
-		pdf.ln()
-		for s in range(len(CH["sets"])):				# for each set
-			key = CH["sets"][s]["meta"]["KEYO"]
-			for l in range(len(CH["sets"][s]["lines"])):				# for each line in the set
-				if len(CH["sets"][s]["lines"][l]) == 1 and CH["sets"][s]["lines"][l][0]["M"] == "X":
-					pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-				else:
-					musicLine = textLine = ''
-					for c in CH["sets"][s]["lines"][l]:						# for each cell in the line
-						# utils.writeLog(f'pdf processing for set {s} line {l} cell {c}')
-						# size of cell will be longer of len(M) and len(T) + 1
-						txtLength = 0 if "T" not in c else len(c["T"])
-						chord = self.getChordNameInKey(c["M"], key)
-						cellLength = max(len(chord), txtLength) + 1
-						musicLine += chord.ljust(cellLength)
-						textLine += ''.ljust(cellLength) if "T" not in c else c["T"].ljust(cellLength)
-					# pdf.set_font("letter gothic", size = 14, style = "B")		# courier
-					pdf.set_text_color(54, 51, 255)
-					pdf.cell(200, 6, txt = musicLine, ln = 1, align = 'L')
-					if "T" in CH["sets"][s]["meta"]["PTN"]:
-						# pdf.set_font("courier", size = 14, style = "")
-						pdf.set_text_color(0, 0, 0)
-						try:
-							pdf.cell(200, 6, txt = textLine, ln = 1, align = 'L')
-						except Exception as e:
-							# self.errors.append(f"id {songId}, set {s}, line {l}" bad character in line")
-							utils.writeLog(f"id {songId}, set {s}, line {l} bad character in line")
-							pdf.cell(200, 6, txt = "problem on this line, check input", ln = 1, align = 'L')
-					pdf.ln()
-		# pdf.cell(200, 6, txt = '-----------------------------------------', ln = 1, align = 'L')
-		pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{songId}.pdf')
-		pdf.output(pdfFile)
-		# utils.writeLog(f"wrote pdf to file for {songId}")
-	def setKey(self, key):
-		if key[-1] == 'm':
-			return self.musicConstants["relativeMajor"][key[0:-1]]
-		return key
-	def newSet(self, metaRecord):
-		S = {}
-		S["meta"] = metaRecord
-		S["lines"] = []
-		return S
-	def createChartRecord(self, NT, s):
-		CHrec = {}
-		CHrec["title"] = self.songDict[s]["TT"]
-		self.errors = []								# will hold accumulated errors
-		sets = []
-		lines = NT.split('↩️')
-		if len(lines) < 3 or len(lines[0]) == 0:
-			self.errors.append("No chart input data")	
-		elif lines[0][0] != '[':
-			self.errors.append("First line not metaline")	
-		elif lines[0][6] == 'X':						# KEYI of X is default
-			self.errors.append("Chart not set up yet")	
-		else:
-			needLyric = False
-			metaRecord = self.chartMetaLine(lines[0], self.getNewMetaRec(), 0)
-			curSet = self.newSet(metaRecord)
-			inKey = metaRecord['KEYI'] = self.setKey(self.notationCleanUp(metaRecord['KEYI']))
-			chord = ''							# this will collect characters until you have a chord
-			curLine = 0
-			# utils.writeLog(f"begin loop for song {s}, curSet is {curSet}")
-			while curLine < len(lines):
-				# utils.writeLog(f"in loop for song {s}, curLine is {curLine}")
-				startPos = 0
-				if len(lines[curLine]) == 0:
-					curLine += 99
-					continue
-				elif lines[curLine][0] == '[':				# could be blank line or meta(new set)
-					if lines[curLine][1] == ']':			# blank line
-						curSet["lines"].append([{"M": 'X', "T": 'X'}])
-						needLyric = False
-					elif curLine > 0:
-						curSet["meta"]["end"] = curLine - 1
-						# utils.writeLog(f"Appending set for song {s}, curSet is {curSet['meta']}")
-						sets.append(curSet)
-						metaRecord = self.chartMetaLine(lines[curLine], curSet["meta"], curLine)
-						curSet = self.newSet(metaRecord)
-						# utils.writeLog(f"in loop for song {s}, curSet is {curSet['meta']}")
-						inKey = self.setKey(self.notationCleanUp(curSet["meta"]["KEYI"]))
-					curLine += 1			# always go to the next line after a metaLine
-					continue
-				else:
-					# each chartLine will consist of [] cells, each having a component for each piece of the PATTERN
-					# assumption: if there are M lines, they will be first, followed by T lines
-					curSet["lines"].append([])			# [] of {M:, 1:, 2:, 3:, B:, T:}
-					for pos in range(len(lines[curLine])):
-						if lines[curLine][pos] > ' ':
-							if chord == '' and pos > 0:			# no chord in progress, start a chord
-								# first need to close out lyric of chord in progress
-								if startPos == 0 and 'T' in curSet["meta"]["PTN"] and needLyric == False:	# if nothing on line yet, add a rest
-									needLyric = self.addChord(inKey, '0', curSet)
-								# needLyric = self.addLyric(curSet, lines[curLine + 1][startPos:pos])
-								needLyric = self.addLyric(curSet, lines, curLine, startPos, pos)
-								startPos = pos		# position for corresponding lyric
-								chord = lines[curLine][pos]
-							else:					# if chord is already in progress
-								chord += lines[curLine][pos]
-						else:						# a space will end a chord that's in progress
-							if chord > '':
-								# find chord in chordDB
-								needLyric = self.addChord(inKey, chord, curSet)
-								chord = ''
-					#process last chord and lyrics at the end of the line
-					self.addChord(inKey, chord, curSet)
-					chord = ''
-					needLyric = self.addLyric(curSet, lines, curLine, startPos, 999)
-					curLine += len(metaRecord["PTN"])
-			curSet["meta"]["end"] = curLine - 1
-			sets.append(curSet)
-		CHrec["sets"] = sets
-		CHrec["errors"] = self.errors				# add errors to status list
-		# utils.writeLog(f"creating new pdf for {s}")
-		self.createPDF(s, CHrec)
-		return CHrec
-	def getChordNameInKey(self, code, key):
-		cPart = bPart = ''
-		inv = code.find('i')				# look for an inversion
-		if code > '0' and code not in self.musicConstants["tokens"]:			# tokens are special characters and chords not integrated yet
-			if inv > -1:						# this is an inversion, split it into cPart and bPart
-				cPart = code[0:inv]	
-				bPart = code[inv + 1:]
-				chordInfo = self.breakDownChord(cPart, key)
-				chordInfo["suffix"] += f'/{chordInfo["notes"][int(bPart)]}'
-			else:
-				chordInfo = self.breakDownChord(code, key) 
-			return f'{chordInfo["note"]}{chordInfo["suffix"]}'
-		elif code in self.musicConstants["tokens"]:
-			return code
-		else:
-			return ''
-	def breakDownChord(self, code, key):
-		# input will be chord and key
-		# return {"chord": chord, "note": note, "suffix": suffix, "symbol": symbol}
-		chordInfo = {}
-		key = self.setKey(key)
-		chordInfo["chord"] = self.codeDB[code][key]
-		chordInfo["symbol"] = self.codeDB[code]["symbol"]
-		if code[1:] == "M":
-			chordInfo["suffix"] = ""
-			chordInfo["note"] = chordInfo["chord"]
-		else:
-			chordInfo["suffix"] = code[1:]
-			chordInfo["note"] = chordInfo["chord"][0: -len(chordInfo["suffix"])]
-		chordInfo["notes"] = self.chordDB[key][chordInfo['chord']]['notes']
-		return chordInfo
-	def getlistTextLine(self, line, addClass):
-		rh = ''
-		for elem in line:	
-			rh += f'''<td class="listText {addClass}">{elem["T"]}</td>''' 
-		return rh
-	def chartMetaLine(self, strng, curMeta, lineNumber):
-		meta = curMeta.copy()
-		inp = strng.strip()[1:-1]			# remove brackets from around id
-		parms = inp.split(', ')				# get each pair from between the commas
-		meta["start"] = lineNumber
-		for pair in parms:
-			values = list(filter(None, pair.split(' ')))
-			keyword = values[0].upper()
-			if len(values) == 2:
-				if keyword in self.constants["metaKeywords"]: 
-					if keyword in ['KEYI', 'KEYO']:
-						values[1] = self.notationCleanUp(values[1])
-					elif keyword == "TYP" and values[1] not in self.constants["chartSetTypes"]:
-						utils.writeLog(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
-						self.errors.append(f'chartMetaLine: Unknown set type {values[1]} in metaline for set {meta}, line number {lineNumber}, defaulting to M')
-						values[1] = "M"
-					meta[keyword] = values[1]
-				# else:
-				elif keyword not in ["COL", "ROW", "START", "CO1", "RO1"]:
-					utils.writeLog(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
-					self.errors.append(f'chartMetaLine: Ignoring unknown metaKeyword {keyword} on line {lineNumber}: {strng}')
-			else:
-				utils.writeLog(f'chartMetaLine: Improperly constructed keyword/value pair on line {lineNumber}: {strng}')
-				self.errors.append(f'chartMetaLine: Improperly constructed keyword/value pair on line {lineNumber}: {strng}')
-		return (meta)
-	def getNewMetaRec(self):
-		# return default metaRecord for chart
-		return {"KEYI": "X", "KEYO": "C", "TYP": "M", "PTN": "MT", "BPM": "000", "RES": "2", "MTR": "A"}
-# s = Songs('106932376942135580175', 'Oalex', '')
-# s = Songs('106932376942135580175', 'Omarie', '')
-# s.processInput({'oper': 'E03B', 'songId': '03B', 'action': '', 'RN': '2023-12-14', 'revNote': '', 'RL': '2023-11-14', 'type': 'edit', 'TG': [{'action': 'd', 'key': 'GFilm'}], 'LL': [], 'SB': [], 'TT': 'Somewhere Over the Rainbow', 'DK': '0', 'NT': "[KEYI G, KEYO G, TYP I, PTN M, BPM 086, RES 2, MTR ABBB]\r\nGs2 G Gs2 G Gs2 G Gs2 G \r\nD7s4 D7 D7s4 D7 D7s4 D7 D7s4 D7\r\n[TYP V, PTN MT]\r\nGs2 G Gs2 G Gs2 G Gs2 G Bm\r\nSome-       where       over the rainbow\r\nC      Gs2  G GM7 G7  \r\nWay up high\r\nC       Cm G/D         E7   \r\nThere's a  land that I heard of\r\nA7        D7s4 D7 D7s4 D7 G Gs2 G Gs2 G  \r\nOnce in a lul-    la-     by\r\n[TYP V]\r\nD7s4 D7 D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G Bm\r\n             Oh some        where       over the rainbow\r\nC         Gs2 G Gs2 G Gs2 G Gs2 G \r\nSkies are blue\r\nC   Cm  G/D             E7 \r\nAnd the dreams that you dare to\r\nA7           D7s4 D7 D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G  \r\nDream really do      come    true\r\n[TYP B]\r\n    Gs2 G    Gs2  G Gs2 G Gs2  G\r\nSomeday I'll wish upon  a star and\r\nD7s4 D7 D7s4  D7  D7s4   D7  \r\nWake up where the clouds are \r\nD7s4 D7 Gs2 G Gs2 G Gs2 G Gs2  G \r\nfar  be hind      me\r\nD7s4 D7 D7s4  D7  D7s4   D7  D7s4 D7 \r\n                             Where \r\nGs2 G    Gs2  G    Gs2 G   Gs2   \r\ntroubles melt like le  mon drops\r\nG F#7s4 F#7 F#7s4 F#7 F#7s4 F#7 F#7s4 \r\na way   a   bove  the chim  ney tops\r\nF#7    Bm    BmM7/A# Am7  D7 D7+5\r\nThat's where you'll  find me\r\n[TYP V]\r\nGs2 G Gs2 G Gs2 G Gs2 G Bm\r\nSome        where       over the rainbow\r\nC         Gs2 G Gs2 G Gs2 G Gs2 G \r\nBluebirds fly\r\nC     Cm  G/D      E7 \r\nBirds fly over the rainbow\r\nA7          D7s4 D7   D7s4 D7 Gs2 G Gs2 G Gs2 G Gs2 G  \r\nWhy then oh why  can't        I\r\n[TYP O]\r\nD7s4 D7 D7s4 D7 Gs2  G  Gs2  G   Gs2  G     Gs2 \r\n        If      Hap- py lit- tle blue birds fly \r\nG  D7s4 D7  D7s4 D7   Am7  G#dim7 Am7  D7    Eb9 G\t\t\r\nBe-yond the rain-bow, why, oh     why, can't I\t\t\r\n\r\n\r\n\r\n", 'TM': '116'})
-# s.jsFunctions()
-# s.adminEdit()
-# s = Songs('106932376942135580175', 'Olucas', '')
-# s = Songs('106932376942135580175', 'Othoryvo', '')
-# s = Songs('106932376942135580175', 'OmarieNme', '')
-# s = Songs('106932376942135580175', 'Ochris', '')
-# s = Songs('106932376942135580175', 'Omiranda', '')
-# s = Songs('106932376942135580175', 'Omarie', '')
-# CH = s.createChartRecord(s.songDict["01K"]["NT"], "01K")
+# sb = Songs('106932376942135580175', 'Omarie')
+# test = sb.processInput({'oper': 'E0DK', 'songId': '0DK', 'action': '', 'RN': '2024-03-14', 'revNote': '', 'RL': '2024-03-11', 'type': 'edit', 'TG': [], 'LL': [], 'SB': [], 'TT': 'Missing', 'DK': '0', 'NT': "[KEYI G, KEYO F, TYP V, PTN MT, BPM 130, RES 2, MTR ABBB]\r\n  F                 C            G                     \r\nI called you and it rang for the first time in a year\r\n           F             C         G\r\nyou didn't answer but it felt like change.\r\nF                    C                G                      \r\nPlease don't pick up now -- I'm still so wrapped up in fear; \r\n             F                 C     G\r\nto hear your voice again would be so strange.\r\n[TYP V]\r\n        F                 C            G                         \r\nI'd for-give a friend, of course, if I heard it from the source, \r\n          F                   C              G\r\nbut as it stands, the missing moments matter most.\r\n        F                C             G                       \r\nThrough birthdays and di-vorce, we all dealt with our remorse, \r\n               F                   C            G\r\nand you let it happen with the dis-passion of a ghost.\r\n         F              C               G                         \r\nIt's the hurt of losing touch; it's the hurt that costs too much. \r\n              F      C         G\r\nI've tried to see it from your side.\r\n             F                C       G    \r\nBut damn it, Dan, why did you have to hide?\r\n\r\n\r\n\r\n\r\n\r\n\r\n", 'CS': '3', 'TM': '99'})
+# sb.jsFunctions({})
+# sb = Songs('106932376942135580175', 'Olucas')
+# sb = Songs('106932376942135580175', 'Othoryvo')
+# sb = Songs('106932376942135580175', 'OmarieNme')
+# sb = Songs('106932376942135580175', 'Ochris')
+# sb = Songs('106932376942135580175', 'Omiranda')
+# print("done")
