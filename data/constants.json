@@ -36,7 +36,8 @@
     "TYP": {"lvl": "set", "desc": "Set type, must be a chartSetType value"},
     "BPM": {"lvl": "song", "desc": "Beats per minute for metronome"},
     "RES": {"lvl": "set", "desc": "Type note resolution for metronome, 0 for 16th, 1 for 8th, 2 for quarter"},
-    "MTR": {"lvl": "set", "desc": "Describes a measure in RES units"}
+    "MTR": {"lvl": "set", "desc": "Describes a measure in RES units"},
+    "TRP": {"lvl": "set", "desc": "Transpose plus or minus a number"}
   },
   "chartRowTypes": {
     "M": "chord",
