@@ -186,59 +186,10 @@ class Songs(object):
 		rev["songTitle"] = self.songDict[rev["songId"]]["TT"]
 		# utils.writeLog(f"returning {rev}")
 		return rev
-	# def addLyric(self, curSet, lines, curLine, start, end):
-	# 	if 'T' in curSet["meta"]["PTN"]:
-	# 		curSet["lines"][-1][-1]["T"] = lines[curLine + 1][start: end].rstrip()
-	# 	return False
 	def notationCleanUp(self, chord):
 		for c in self.musicConstants["chordNotation"]:
 			chord = re.sub(c, self.musicConstants["chordNotation"][c]["replace"], chord)
 		return chord
-	# def getCodeFromChordDB(self, chord, key):
-	# 	if chord == '0':
-	# 		return '0'
-	# 	slash = chord.find('/')
-	# 	if slash > -1: 					# this is an inversion -- work on the chord part and put it back together afterward
-	# 		cPart = self.findChordInDB(chord[0:slash], key)
-	# 		if cPart == "?":
-	# 			return cPart
-	# 		bPart = chord[slash + 1:]
-	# 		code = f"{cPart}i"
-	# 		for i in range(len(self.chordDB[key][chord[0:slash]]["notes"])):
-	# 			if bPart == self.chordDB[key][chord[0:slash]]["notes"][i]:
-	# 				return f'{code}{i}'
-	# 		self.errors.append(f'returning ? for {chord} in key {key}, inversion error')
-	# 		return '?'
-	# 	else:
-	# 		return self.findChordInDB(chord, key)
-	# def findChordInDB(self, chord, key):
-	# 	if chord in self.chordDB[key]:
-	# 		return self.chordDB[key][chord]["code"]
-	# 	if chord in self.musicConstants["tokens"]:
-	# 		return chord
-	# 	token = '?'
-	# 	return token
-	# def getAlternateNote(self, chord, length, key):
-	# 	note = chord[0:length]
-	# 	pitch = self.musicConstants["notes"][note]
-	# 	for n in self.musicConstants["pitches"][pitch]:
-	# 		if n != note:
-	# 			# toDo: log this as part of the updateReview process
-	# 			if f"{n}{chord[length:]}" in self.chordDB[key]:
-	# 				self.errors.append(f"didn't find {chord} in key {key}, returning {n}{chord[length:]}")
-	# 				return self.chordDB[key][f"{n}{chord[length:]}"]["code"]
-	# 			else:
-	# 				self.errors.append(f"{n}{chord[length:]} not in {key}, what's going on?")
-	# 	self.errors.append(f'Songs.getAlternateNote: chord {chord}. length {length}, key {key}, found nothing for this')
-	# def addChord(self, key, chord, curSet):
-	# 	# utils.writeLog(f'addChord for chord {chord}, key {key}')
-	# 	chord = self.notationCleanUp(chord)
-	# 	if chord > '':
-	# 		curSet["lines"][-1].append({})
-	# 		curSet["lines"][-1][-1]["M"] = self.getCodeFromChordDB(chord, key)
-	# 		if "T" in curSet["meta"]["PTN"]:
-	# 			return True
-	# 	return False
 	def loadData(self):
 		### reads input files from data folder for repository
 		### path will be ToMarRoot || songbook/data || self.rr[1:]
@@ -270,6 +221,7 @@ class Songs(object):
 			#print('due date for {} is {}'.format(c, self.songDict[c]["RN"]))
 			#title = re.sub("'", "&apos;", self.songDict[c]["TT"])
 			self.config["decks"][self.songDict[c]["DK"]]["songs"].append(c)	#for deckFilter
+			# utils.writeLog(f'{c}: {self.songDict[c]["RL"]}')
 			if self.songDict[c]["RL"] == str(self.today):				#reviewed today
 				self.config["decks"][self.songDict[c]["DK"]]["rev"].append(c)
 			if self.songDict[c]["RN"] == '':				#inactive
@@ -334,6 +286,7 @@ class Songs(object):
 				toDate = fromDate
 		else:
 			toDate = fromDate
+		# utils.writeLog(f'in revByDate, {fromDate} to {toDate}')
 		dateFile = os.path.join(self.root, 'songbook/data', self.rr[1:], 'reviewDates.json')
 		with open(dateFile,'r',encoding='utf8') as u:
 			revDateDict = json.load(u)
@@ -540,117 +493,11 @@ class Songs(object):
 		# songTitle = re.sub("'", "&apos;", self.songDict[s]["TT"])
 		title = f'''<span id="{id}" class="hoverText songInfo">{title}</span>'''
 		return f'''<div class=hoverContainer><input type="button" class="{style}" value="{value}" onClick={onclick}; id="{id}" {disabled}>{title}</div>'''
-	def fieldDisplay(self, f, s):
-		if f in self.constants["fields"]:
-			rh = f'<b>{self.constants["fields"][f]["title"]}: </b>{self.songDict[s][f]}' 
-		else:
-			rh = f'<b>{self.config["userFields"][f]["title"]}: </b>{self.songDict[s][f]}' 
-		return rh
-	def processTags(self, tagsIn):
-		#not used any more, as of 2020-09-28, not showing tags in string input field
-		L = tagsIn.split()
-		return list(dict.fromkeys(L))
-	def fldEdit(self, f, s, style, disable = ''):
-		field = self.getField(f)
-		if f in self.songDict[s]:
-			curVal = self.songDict[s][f]
-		else:
-			curVal = ''
-		lbl = f'<label class="{style}" for="{f}"><b>{field["title"]}: </b></label>'    # type: ignore
-		fld = f'<input type="{field["type"]}" oninput=enableSave() size="30" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
-		return (lbl, fld)
-	def editField(self, f, s, style, lngth, disable = ''):
-		# utils.writeLog(f"in editField, field is {f}, length is {lngth}")
-		field = self.getField(f)
-		if f in self.songDict[s]:
-			curVal = self.songDict[s][f]
-		else:
-			curVal = ''
-		return f'<input type="{field["type"]}" oninput=enableSave() size="{lngth}" class="{style}" name="{f}" id="{f}" value="{curVal}" {disable}/>'    # type: ignore
-	def addDictButton(self, f):
-		js = f"addEntry('{f}'); " 
-		return self.makeButton(f'+ {self.constants["fields"][f]["title"]}', js, "tagButton", f"add{f}" , False, "Add entry<br>Labels:<br>AUDIO<br>VIDEO<br>WIKI<br>SHEET")
-	def dictFieldEdit(self, f, s):
-		# this will display all the existing entries in the dict, and then one blank one that will be disabled, but have a set button
-		# each row will be type  label  value
-		rh = ''
-		# display existing fields with delete button
-		for i in sorted(self.songDict[s][f]):
-			name = f'{f}{i}' 
-			lbl = f'<label for="{name}"><b>{i}: </b></label>'  
-			fld = f'''<input class="listText" type="text" oninput=enableSave() size="50" name="{name}" id="{name}" value="{self.songDict[s][f][i]}"/>'''
-			chk = f'''<input title="remove" type="checkbox" value="delete" onchange=enableSave() name="del{name}" id="del{name}">'''
-			rh += f'<tr><td class=listText>{lbl}</td><td class=listText>{fld}</td><td class=listText>{chk}</td></tr>' 
-		return rh
 	def calDate(self, dateIn):
 		yy = int(dateIn[0:4])
 		mm = int(dateIn[5:7])
 		dd = int(dateIn[8:])
 		return datetime.date(yy, mm, dd)
-	def getCannedLabel(self, l, editScreen, fileName):
-		def getClass():
-			if editScreen == "Y":
-				return "pnlButton"
-			else:
-				return "listText bgButton"
-		labelInfo = {}
-		if len(l) >= 3 and l.upper()[0:4] == "WIKI":
-			labelInfo["label"] = self.constants["icons"]["wiki"]
-			labelInfo["title"] = "Wikipedia entry"
-			labelInfo["class"] = getClass()
-		elif len(l) >= 3 and l.upper()[0:7] == "YOUTUBE" or len(l) >= 5 and l.upper()[0:5] == "VIDEO":
-			labelInfo["label"] = self.constants["icons"]["video"]
-			labelInfo["title"] = "Video"
-			labelInfo["class"] = getClass()
-		elif len(l) >= 5 and l.upper()[0:5] == "SHEET":
-			labelInfo["label"] = self.constants["icons"]["sheet"]
-			labelInfo["title"] = "Sheet music"
-			labelInfo["class"] = getClass()
-		elif fileName.find(".mp3") > 0 or len(l) >= 5 and l.upper()[0:5] == "AUDIO":
-			labelInfo["label"] = self.constants["icons"]["audio"]
-			labelInfo["title"] = fileName[0:-4]
-			labelInfo["class"] = getClass()
-		else:
-			labelInfo["label"] = l
-			labelInfo["title"] = l
-			labelInfo["class"] = "pnlButton"
-		return labelInfo
-	def llButton(self, s, l, editScreen):
-		labelInfo = self.getCannedLabel(l, editScreen, '')
-		return self.makeButton(labelInfo["label"], f'openLink("{self.songDict[s]["LL"][l]}")' , labelInfo["class"], "", False, labelInfo["title"])
-	def mediaButton(self, s, l, editScreen):
-		labelInfo = self.getCannedLabel(l, editScreen, self.songDict[s]["SB"][l])
-		return self.makeButton(labelInfo["label"], f'showMedia("{self.songDict[s]["SB"][l]}")', labelInfo["class"], "", False, labelInfo["title"])
-	def songLinkButtons(self, s):
-		actions = ''
-		cls = "listText bgButton"
-		if self.rr[0] == "O":
-			button = self.makeButton(self.constants["icons"]["schedule"], f'showDetail("{s}")', f"{cls}", f"schedButton{s}", "", f"Schedule {self.songDict[s]['TT']}") 
-			actions += f'<td>{button}</td>'
-		# actions += f'<td>{self.metronomeButton(s, "N")}</td>'
-		if self.songDict[s]["CS"] in [0, 1]:
-			button = self.makeButton(self.constants["icons"]["chart"], f'showChart("NN{s}")', f"{cls}", f"chartButton{s}", "", f"Chart for {self.songDict[s]['TT']}") 
-			actions += f'<td>{button}</td>'
-		for m in self.songDict[s]["SB"]:
-			button = self.mediaButton(s, m, "N")
-			actions += f'<td>{button}</td>'
-		for l in self.songDict[s]["LL"]:
-			button = self.llButton(s, l, "N")
-			actions += f'<td>{button}</td>'
-		actions += f'<td>{self.pdfButton(s)}</td>'
-		return f'<table><tr valign="top">{actions}</tr></table>'
-	def pdfButton(self, s):
-		pdfFile = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'pdfs', f'{s}.pdf')
-		if (os.path.exists(pdfFile)):
-			js = f"openLink('../data/{self.rr[1:]}/pdfs/{s}.pdf'); "
-			return f'<div class=hoverContainer><img src="../js/pdfIcon.png" alt="chart pdf" onclick="{js}"><span class="hoverText songInfo">Chart pdf</span></div>'
-		return ''
-	def tagLink(self, t):
-		tCount = len(self.tagDict[t[0]][t[1:]])
-		tName = t[1:]
-		tType = self.config["tagCtgs"][t[0]]["title"]
-		hover = f'<span class=hoverText><b>{tType}: {tName}:</b> {tCount} songs</span>'
-		return f'<div class=hoverContainer><a href=javascript:doSearch("{t}"); class="listItem">{t[1:]}</a>{hover}</div>'
 	def newChangeRec(self):
 		# establishes an empty changeRec, 10/05/22 -- adding NT field to changeRec
 		changeRec = {"TG": [], "LL": [], "SB": [], "TT": [], "DK":[], "NT": [], "CS":[]}

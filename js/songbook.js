@@ -497,14 +497,6 @@ function setTempo(e) {
 	SBdata["metronomeStatus"] = play();
 	if (e != null) { e.preventDefault(); }
 }
-function getNextSet(e) {
-	if (e != null) { e.preventDefault(); }	
-	CHrec["currentSetIndex"] = displaySetInPanels();
-	if (CHrec["currentSetIndex"] == CHrec.sets.length) {
-		// $("moreButton").innerHTML = "";				// remove button if no more sets to show
-		$("moreButton").disabled = true;
-	}
-}
 function editSet(setId) {
 	// you will only get here from the chart modal -- close the modal
 	// alert(`in editSet, setID is ${setId}`);
@@ -519,7 +511,7 @@ function displayMetaLine(set, setTable) {
 	metaTable.style.width = "100%";
 	let metaRow = metaTable.insertRow();
 	let outerDiv = createDiv("outerDiv", "hoverContainer");	// this holds metaRow and span with hoverText
-	let mrow = metaTable.insertRow();						// table will only have one row <td> for setID, <td> for edit button
+	let mrow = metaTable.insertRow();		// table will only have one row <td> for setID, <td> for edit button
 	addTDtoTRtext(CHrec["currentSetIndex"], mrow, "chartMeta");		// need to add edit button to this
 	addTDtoTRtext(SBdata["constants"]["chartSetTypes"][set["meta"]["TYP"]], mrow, "chartMeta");
 	if (CHrec["screen"] == "F") {
@@ -530,7 +522,7 @@ function displayMetaLine(set, setTable) {
 		a.href = `javascript: editSet(${CHrec["currentSetIndex"]})`;
  		addTDtoTRnode(a, mrow);
 	}
-	let hoverSpan = makeHoverSpan(`BPM: ${set["meta"]["BPM"]}<br>Meter: ${set["meta"]["MTR"]}<br>Key: ${set["meta"]["KEYO"]}`);
+	let hoverSpan = makeHoverSpan(`BPM: ${CHrec["meta"]["BPM"]}<br>Meter: ${set["meta"]["MTR"]}<br>Key: ${CHrec["displayKey"]}`);
 	outerDiv.appendChild(metaTable);
 	outerDiv.appendChild(hoverSpan);
 	addTDtoTRnode(outerDiv, row);
@@ -541,17 +533,13 @@ function displayChartLine(set, line, lineIndex, setTable) {
 	if (line.length == 1 && line[0]["M"] == 'X') {
 		addTDtoTRnode(document.createElement("hr"), setLineRow);		// no cells, just a <hr>			
 		CHrec["linesInColumn"] += 1;
-	} else {
+	} else if (line.length > 0) {
 		let lineTable = document.createElement("table");  // table of subordinate rows (1, 2, 3, M, and T) for EACH LINE of the set
 		let col = document.createElement("td");
 		col.style.backgroundColor = (lineIndex % 2 == 0) ? "#EEE" : "#DDD";
 		col.appendChild(lineTable);
 		setLineRow.appendChild(col);
 		// for each character in pattern, insert a corresponding row in lineTable and fill it
-		let key = CHrec["meta"]["KEYO"];
-		if (key.slice(-1) == "m") {		// if it's a minor key, get relative major
-			key = SBdata["musicConstants"]["relativeMajor"][key.slice(0, -1)];
-		}
 		let lineSeq = SBdata["constants"]["chartRowSequence"].split('');
 		lineSeq.forEach((code) => {
 			if (set["meta"]["PTN"].includes(code)) {
@@ -571,9 +559,9 @@ function displayChartLine(set, line, lineIndex, setTable) {
 								cPart = chordCode;
 								bPart = -1;
 							}
-							let chordInfo = {"chord": SBdata["codeDB"][cPart][key], "symbol": SBdata["codeDB"][cPart]["symbol"]};
+							let chordInfo = {"chord": SBdata["codeDB"][cPart][set["meta"]["displayKey"]], "symbol": SBdata["codeDB"][cPart]["symbol"]};
 							chordInfo["suffix"] = (cPart.slice(1) == "M") ? "" : cPart.slice(1);
-							chordInfo["notes"] = SBdata["chordDB"][key][chordInfo["chord"]]["notes"];
+							chordInfo["notes"] = SBdata["chordDB"][set["meta"]["displayKey"]][chordInfo["chord"]]["notes"];
 							chordInfo["hover"] = `${chordInfo["symbol"]}: ${chordInfo["notes"]}`;
 							if (bPart > -1) {
 								chordInfo["suffix"] = `${chordInfo["chord"]}/${chordInfo["notes"][bPart]}`;
@@ -589,16 +577,6 @@ function displayChartLine(set, line, lineIndex, setTable) {
 		})
 		CHrec["linesInColumn"] += CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].length
 	}	
-}
-function displaySetInPanels() {
-	let setTable = (CHrec["currentSetIndex"] % 2 == 0) ? $("panel0setTable") : $("panel1setTable"); 	// get set table
-	setTable.innerHTML = "";
-	let set = CHrec["sets"][CHrec["currentSetIndex"]];
-	displayMetaLine(set, setTable);							// display set metaData
-	set["lines"].forEach((line, lineIndex) => {				// display lines in set 
-		displayChartLine(set, line, lineIndex, setTable);
-	})
-	return CHrec["currentSetIndex"] + 1;
 }
 function createMetronomeDiv(id, divisor) {
 	let metronomeTable = document.createElement("table");
@@ -677,6 +655,7 @@ function copyChart(argument) {
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			document.gForm.NT.value = this.responseText;
+			enableSave();
 		}
 	};
 	let g = document.gForm.gId.value;
@@ -690,7 +669,7 @@ async function buildCHrec() {
 	$("messageArea").innerHTML = "Converting input to chart...";
 	CHrec["errors"] = [];
 	CHrec["sets"] = [];
-	CHrec["CHcnv"] = {"0": {"name": " "}, "|": {"name": "|"}, ":": {"name": ":"}, "?": {"name": "?"}};
+	CHrec["CHcnv"] = {};
 	let ntInput = $("NT");	
 	let sourceLines = (ntInput.value).split("\n");
 	let sourceLineIndex = CHrec["linesInColumn"] = 0;
@@ -701,12 +680,12 @@ async function buildCHrec() {
 	while (eof == false && errorFlag == false && sourceLineIndex < sourceLines.length) {
 		let sourceLine = sourceLines[sourceLineIndex].trimEnd();
 		// console.log(`${sourceLineIndex}: ${sourceLine}`);
-		if (sourceLine.substring(0, 1) == "[") {		// new set, close out old one
+		if (sourceLine.substring(0, 1) == "[" && (sourceLine.substring(1, 2) != "]")) {		// new set, close out old one
 			if (CHrec["sets"].length > 0) {
 				CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["end"] = sourceLineIndex - 1;
 				CHrec["sets"].push({"meta": {...CHrec["sets"][CHrec["currentSetIndex"]]["meta"]}, "lines": []}); 
 			} else{
-				CHrec["sets"].push({"meta": {"DSP": "1", "TYP": "M", "PTN": "MT", "RES": "2", "MTR": "A", "start": sourceLineIndex, "end": 0}, "lines": []}); 
+				CHrec["sets"].push({"meta": {"TRP": 0, "DSP": "1", "TYP": "M", "PTN": "MT", "RES": "2", "MTR": "A", "start": sourceLineIndex, "end": 0}, "lines": []}); 
 			}
 			CHrec["currentSetIndex"] += 1;
 			let metaLine = sourceLine.replace("[", "");
@@ -730,13 +709,33 @@ async function buildCHrec() {
 					}
 				}
 			});
-			if (CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].substring(0, 1) != "M") {
-				CHrec["errors"].push({"sev": 1, "line": sourceLineIndex, "txt": sourceLine.substring(0, 15), "msg": "Pattern must start with M"});
-				errorFlag = true;
-			} else {
-				CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["start"] = sourceLineIndex;
-				sourceLineIndex += 1;
-			} 
+			["KEYI", "KEYO"].forEach((keyWord) => {
+				if (!(keyWord in CHrec["meta"])) {
+					CHrec["errors"].push({"sev": 1, "line": sourceLineIndex, "txt": sourceLine.substring(0, 15), "msg": `${keyWord} must be specified in line 1`});
+					errorFlag = true;
+				} else {
+					if (!(CHrec["meta"][keyWord] in SBdata["musicConstants"]["notes"])) {
+						CHrec["errors"].push({"sev": 1, "line": sourceLineIndex, "txt": sourceLine.substring(0, 15), "msg": `${CHrec["meta"][keyWord]}: ${keyWord} must be a valid major key`});
+						errorFlag = true;
+					} 
+				}
+			});
+			if (errorFlag == false) {
+				if (CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].substring(0, 1) != "M") {
+					CHrec["errors"].push({"sev": 1, "line": sourceLineIndex, "txt": sourceLine.substring(0, 15), "msg": "Pattern must start with M"});
+					errorFlag = true;
+				} else {
+					let transposeBy = parseInt(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["TRP"]);
+					if (!(isNaN(transposeBy))) {
+						CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["displayKey"] = SBdata["musicConstants"]["pitches"][SBdata["musicConstants"]["notes"][CHrec["meta"]["KEYO"]] + transposeBy][0];
+						if (!(CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["TRP"] in CHrec["CHcnv"])) {
+							CHrec["CHcnv"][CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["TRP"]] = {"0": {"name": " "}, "|": {"name": "|"}, ":": {"name": ":"}, "?": {"name": "?"}};
+						}
+					}
+					sourceLineIndex += 1;
+					CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["start"] = sourceLineIndex;
+				} 
+			}
 		} else {
 			if (sourceLineIndex == 0) {
 				CHrec["errors"].push({"sev": 1, "line": sourceLineIndex, "txt": sourceLine.slice(0, 15), "msg": "first line must be metadata"});
@@ -744,6 +743,9 @@ async function buildCHrec() {
 			} else if (sourceLine.length == 0) {
 				CHrec["errors"].push({"sev": 0, "line": sourceLineIndex, "txt": sourceLine.slice(0, 15), "msg": "end of input"});
 				eof = true;
+			} else if ((sourceLine.substring(1, 2) == "]")) { // [] inserts a hard rule into current set: "M": "X"
+				CHrec["sets"][CHrec["currentSetIndex"]]["lines"].push([{"M": "X"}]);
+				sourceLineIndex += 1;
 			} else {
 				// first, split the chord line into cells
 				let charIndex = 0;
@@ -759,13 +761,13 @@ async function buildCHrec() {
 						}
 					} else if (chordInProgress > '') {
 						// translate the chord to chord code before storing
-						lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"]);
+						lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"][CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["TRP"]]);
 						chordInProgress = '';
 					} 
 					charIndex += 1;
 				}
 				if (chordInProgress > '') {
-					lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"]);
+					lineCells[lineCells.length - 1]["M"] = convertChordToCode(chordInProgress, sourceLine, sourceLineIndex, CHrec["CHcnv"][CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["TRP"]]);
 				}
 				if (lineCells[0]["start"] > 0) { // there's a pick-up, put a blank cell in at the start
 					lineCells.unshift({"start": 0, "M": 0});
@@ -795,12 +797,15 @@ async function buildCHrec() {
 			}
 		}
 	}
-	let chartStatus = await saveChart(CHrec["id"]);
+	let chartStatus;
 	if (!errorFlag) {
+		chartStatus = await saveChart(CHrec["id"]);
 		CHrec["errors"].push({"sev": 0, "line": "", "txt": "Chart file save returned", "msg": chartStatus});
-	} 
+	} else {
+		chartStatus = 0;
+		CHrec["errors"].push({"sev": 1, "line": "", "txt": "Chart not saved due to errors", "msg": chartStatus});
+	}
 	sessionStorage.setItem("chartStatus", chartStatus);
-	sessionStorage.setItem("editFlag", true);
 	displayMessages();
 }
 function convertChordToCode(chord, sourceLine, sourceLineIndex, cnvTable) {
@@ -838,16 +843,19 @@ function convertChordToCode(chord, sourceLine, sourceLineIndex, cnvTable) {
 		CHrec["errors"].push({"sev": 0, "line": sourceLineIndex, "txt": sourceLine.slice(0, 15), "msg": message});
 		return "?";
 	}
-	if (!(cPart in cnvTable)) {
-		chordName = SBdata["codeDB"][bCode][CHrec["meta"]["KEYO"]];
-		chordNotes = SBdata["chordDB"][CHrec["meta"]["KEYO"]][chordName]["notes"];
+	if (!(bCode in cnvTable)) {
+		let chordName = SBdata["codeDB"][bCode][CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["displayKey"]];
+		let chordNotes = SBdata["chordDB"][CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["displayKey"]][chordName]["notes"];
 		cnvTable[bCode] = {"name": chordName, "notes": chordNotes};
 	}
 	return code;
 }
 function displayMessages() {
 	$("messageArea").innerHTML = "";
+	let rslt = CHrec["errors"].pop();
 	let tbl = newBorderedTable();
+	let row = tbl.insertRow();
+	addTDtoTRtext(`${rslt["txt"]}: ${rslt["msg"]}`, row, "listText");
 	CHrec["errors"].forEach((obj) => {
 		row = tbl.insertRow();
 		addTDtoTRtext(`Sev: ${obj["sev"]} Ln ${obj["line"]}: ${obj["txt"]}: ${obj["msg"]}`, row, "listText");
@@ -855,10 +863,15 @@ function displayMessages() {
 	$("messageArea").appendChild(tbl);
 }
 function showChartIntegrated(setId) {
-	// setId is solely for cursor placement in NT input field
+	console.log(`in showChartInt, set ${setId}`);	// for cursor placement in NT input field
 	// this will create and save a record for reviewCharts.json
 	// chartTable will either display the assembled line, or the error that it gave
 	$("NT").disabled = false;
+	let songId = setId.substring(0, 3);
+	let set = parseInt(setId.substring(3));
+	let start = 72 * CHrec["sets"][set]["meta"]["start"];
+	let end = 72 * CHrec["sets"][set]["meta"]["end"];
+	$("NT").setSelectionRange(start, end);
 	let rightPanel = $("rightPanel");
 	sessionStorage.setItem('editRecord', JSON.stringify(SBlist));			// saving the edit screen to put back up when done, don't need if using modal
 	sessionStorage.setItem("screen", "chart");
@@ -1381,6 +1394,16 @@ function detailLinkTD(txt, href, hoverText, row) {
 	row.appendChild(elem);
 	return lnk;
 }
+function importChartFromOtherRepository(e) {
+	let repos = $("CR").value;
+	let inKey = prompt(`Enter songId from the ${repos} repository: `).toUpperCase();
+	if (inKey.length != 3) {
+		alert(`${inKey} isn't a valid songID.`);
+	} else {
+		copyChart(`${inKey}${repos}`); 
+	}
+	if (e != null) { e.preventDefault(); }	
+}
 function songAction(e) {
 	let songId = e.target.id.substring(5, 8);
 	let type = e.target.id.substring(0, 5);
@@ -1396,7 +1419,7 @@ function songAction(e) {
 		CHrec = {"id": songId, "startTime": 0, "elapsed": 0, "sets": [], "errors": []};
 		showChartIntegrated(`${songId}0`);
 	} else if (type == "media") {
-		openLink(`../js/${SBdata["repository"]}/${SBlist["songs"][songId]["SB"]["Media"]}`);
+		openLink(`../js/${SBdata["repository"]}/${SBlist["songs"][songId]["SB"][Object.keys(SBlist["songs"][songId]["SB"])[0]]}`);
 	} else if (type == "link ") {
 		openLink(SBlist["songs"][songId]["LL"][e.target.id.substring(8)]);
 	} else if (type == "pdf  ") {
@@ -1418,15 +1441,7 @@ function songAction(e) {
 	} else if (type == "likeN") {
 		document.gForm.oper.value = `LN${SBdata["userName"]}${songId}`;
 		document.gForm.submit();
-	} else if (type == "imp  ") {
-		// alert(`import from chart from repository ${e.target.id.substring(8)} to songId ${songId}`);
-		let inKey = prompt(`Enter songId from the ${e.target.id.substring(8)} repository: `).toUpperCase();
-		if (inKey.length != 3) {
-			alert(`${inKey} isn't a valid songID.`);
-		} else {
-			copyChart(`${inKey}${e.target.id.substring(8)}`); 
-		}
-	}
+	} 
 	if (e != null) { e.preventDefault(); }	
 }
 function getCannedLabel(lbl) {
@@ -1706,11 +1721,11 @@ function getElapsedDays(date1, date2) {
 	returnObj["value"] = daysElapsed;
 	returnObj["text"] = `${date1}, ${daysElapsed} days`;
 	if (daysElapsed > 364) {
-		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/365).toFixed(2)} years`;
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed * 100/365) / 100} years`;
 	} else if (daysElapsed > 29) {
-		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/30).toFixed(2)} months`;
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed * 100/30) / 100} months`;
 	} else if (daysElapsed > 6) {
-		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed/7).toFixed(2)} weeks`;
+		returnObj["text"] = `${returnObj["text"]}, ${Math.round(daysElapsed * 100/7) / 100} weeks`;
 	}
 	return returnObj;
 }
@@ -1801,16 +1816,24 @@ function displaySong() {
 		actionBar.appendChild(createButton(`histo${songId}`, "pnlButton", songAction, "History", `Review history`));
 		actionBar.appendChild(createButton(`copy ${songId}`, "pnlButton", songAction, "Copy", `Copy song information`));
 		actionBar.appendChild(createButton(`cance${songId}`, "pnlButton", songAction, "Cancel", `Cancel edit`));
-		let otherRoles = false;
+		let cr = document.createElement("select");
+		cr.id = "CR";
+		cr.className = "pnlButton";
+		cr.appendChild(createOption({"val": "", "desc":`Copy chart from:`}));
+		cr.addEventListener("change", importChartFromOtherRepository);
+		let otherRepos = false;
 		SBdata["roleList"].forEach((role) => {
-			if (role.substring(0, 1) == "O" && role != `${SBdata["role"]}${SBdata["repository"]}`) {
-				if (otherRoles == false) {
-					actionBar.appendChild(document.createTextNode("Copy chart from: "));
-					otherRoles = true;
-				}
-				actionBar.appendChild(createButton(`imp  ${songId}${role.substring(1)}`, "pnlButton", songAction, role.substring(1), `Copy chart from ${role.substring(1)}`));
+			// console.log(`role: ${role} ${SBdata["repository"]}`)
+			if (role.substring(0, 1) == "U" && role.substring(1) != SBdata["repository"]) {
+				let opt = document.createElement('option');
+				opt.innerHTML = opt.value = role.substring(1);
+				cr.appendChild(opt);
+				otherRepos = true;
 			}
 		});
+		if (otherRepos == true) {
+			actionBar.appendChild(cr);
+		}
 		// reviewArea
 		// first row is title and deck
 		let titleAndDeck = createDiv("row1", "listText");
@@ -2054,9 +2077,9 @@ function backButton(e) {
 					let actionBar = $("revDiv");
 					let songId = Object.keys(SBlist["songs"])
 					if (newValue >= 2) {
-						actionBar.appendChild(createButton(`pdf  ${songId}`, "pnlButton", songAction, "pdf", `PDF of chart for ${songId}`, true));
+						actionBar.appendChild(createButton(`fchrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart`));
 						if (newValue == 3) {
-							actionBar.appendChild(createButton(`fchrt${songId}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Display chart`));
+							actionBar.appendChild(createButton(`pdf  ${songId}`, "pnlButton", songAction, "pdf", `PDF of chart for ${songId}`, true));
 						}
 					}
 				}
