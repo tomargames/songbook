@@ -82,7 +82,7 @@ print(f'''
 </div>  
 <div id="smallModal" class="smallmodal">
   <!-- Modal content for songDetail-->
-  <div class="modal-content">
+  <div class="modal-content" style="background-color: #DDD";>
     <p id="sDisplay">filler</p>
     <p id="sClose" class="close">close</p>
   </div>
@@ -119,7 +119,7 @@ else:
 			# utils.writeLog(f'index.py: oper is {oper}')
 			rev = {"oper": oper, "songId": "", "action": ""}
 			if oper > '': 				# if there's something in oper, gather form input
-				# utils.writeLog(f'index.py: oper > "", oper is {oper}, rev is {rev}')
+				utils.writeLog(f'1index.py: oper > "", oper is {oper}, rev is {rev}')
 				if oper[0] == "L":				# this is a user liking/unliking a song, set message in rev
 					# utils.writeLog(f'index.py: oper is L, rev is {rev}')
 					yn = oper[1]
@@ -153,6 +153,7 @@ else:
 						except Exception as e:
 							print(f'error writing review record: {e}')
 					elif oper[0] == 'E':
+						utils.writeLog(f'2index.py: oper > "", oper is {oper}, rev is {rev}')
 						rev["type"] = "edit"
 						# tags and links don't get copied to input fields on a copy, so if it's a copy, do it here
 						rev["TG"] = []
