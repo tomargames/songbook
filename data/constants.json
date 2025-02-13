@@ -47,6 +47,12 @@
     "B": "bass",
     "T": "text"
   },
+  "chartStatus": {
+    "NONE": 0,
+    "ERRORS": 1,
+    "NOPDF": 2,
+    "PDF": 3
+  },
   "chartRowSequence": "123MBT",
   "icons": {
     "chart": "📈",

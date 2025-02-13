@@ -22,6 +22,7 @@ table {
 }
 .chartModal {
   display: flex;
+  margin-top: 10px;    
 }
 .searchBox {
   font-size:24px; 
@@ -33,10 +34,10 @@ table {
   position:  fixed;
   z-index: 1; /* Sit on top */
   padding-top: 5px; /* Location of the box */
-  left: 300;
+  left: 15;
   top: 15;
-  width: 65%; /* Full width */
-  height: 65%; /* Full height */
+  width: 80%; /* Full width */
+  height: 80%; /* Full height */
   overflow: auto; /* Enable scroll if needed */
   background-color: rgb(0,0,0); /* Fallback color */
   background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
@@ -198,6 +199,13 @@ table {
   background-color:azure;
   color: black;
   font-size: .9em;
+  position: sticky;
+  top: 0;
+  left: 0;
+  min-width: 1px;
+  width: 60px;
+  height: 30px;
+  display: block;
 }
 .pnlButton:hover,
 .pnlButton:focus 

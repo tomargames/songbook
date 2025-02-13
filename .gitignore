@@ -16,3 +16,6 @@ data/*
 programs/__pycache__
 .vscode
 js/marieNme/SometimesYouEatTheBear.jpg
+js/songbookNew.js
+programs/index.py
+js/songs.css.elle
