@@ -10,7 +10,8 @@
     "RT": {"title": "Reviews", "type": "text", "sec": "O"},
     "CS": {"title": "ChartStatus", "type": "text", "sec": "O"},
     "NT": {"title": "Chart", "type": "text", "sec": "O"},
-    "CD": {"title": "Created", "type": "date", "sec": "O"}
+    "CD": {"title": "Created", "type": "date", "sec": "O"},
+    "revNotes": {"title": "RevNotes", "type": "list", "sec": "O"}
     },
   "roles": {
     "O": "Owner",

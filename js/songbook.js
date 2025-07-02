@@ -31,7 +31,7 @@ function loadJs(x)
 	}
 	let app = $("app");
 	app.innerHTML = "";
-	let menuTable = newBorderedTable()
+	let menuTable = createBorderedTable()
 	let sr = createDiv("searchResults");
 	app.appendChild(menuTable);
 	app.appendChild(sr);
@@ -86,7 +86,7 @@ function loadJs(x)
 		songLink.href = `javascript:doSearch("o${SBdata["revData"]["songId"]}")`;
 		$("message").appendChild(songLink);
 	}
-	let deckTable = newBorderedTable();
+	let deckTable = createBorderedTable();
 	addTDtoTRnode(deckTable, topRow);
 	let deckRow = deckTable.insertRow();
 	Object.keys(SBdata["config"]["decks"]).forEach((deck) => {
@@ -336,6 +336,8 @@ function buildDialog(headingText, saveButtonText) {
 	saveDialogForm.style.height = "40px";
 	saveDialogForm.style.backgroundColor = "lightgreen";
 	saveDialogForm.textContent = saveButtonText;
+	dialogForm.appendChild(document.createElement("br"));
+	dialogForm.appendChild(document.createElement("br"));
 	return dialog;
 }
 function settingsDialog() {
@@ -343,20 +345,43 @@ function settingsDialog() {
 	let form = dialog.childNodes[1];
 	form.appendChild(createInputElement("number", "1", "8", "chartColumns", "Chart Columns", getFromLocal("songBookCols")));
 	form.appendChild(document.createElement("br"));
+	form.appendChild(document.createElement("br"));
 	form.appendChild(createInputElement("number", "1", "999", "chartRows", "Chart Rows", getFromLocal("songBookRows")));
 	form.appendChild(document.createElement("br"));
-	if (SBdata["role"] == "O") {
+	form.appendChild(document.createElement("br"));
+	if (isOwner()) {
 		form.appendChild(createInputElement("number", "0", "9999", "dueRange", "Maximum Days Overdue", getFromLocal("songBookDueRange")));
 		form.appendChild(document.createElement("br"));
+		form.appendChild(document.createElement("br"));
+		form.appendChild(createInputElement("number", "0", "9999", "maxNotes", "Maximum Review Notes Displayed", getFromLocal("songBookMaxRevNotes")));
 	}
 	form.childNodes[0].addEventListener("click", (event) => {
 		let cols = ($("chartColumns").value) * 1;
 		let rows = ($("chartRows").value) * 1;
-		let dueRange = 0;
-		if (SBdata["role"] == "O") {
-			dueRange = ($("dueRange").value) * 1;
+		let dueRange, maxNotes;
+		if (isOwner()) {
+			dueRange = $("dueRange").value;
+			maxNotes = $("maxNotes").value;
+			if (dueRange === null) {
+				dueRange = 0;
+			} else {
+				dueRange = (dueRange * 1)
+			}
+			if (maxNotes === null) {
+				maxNotes = 0;
+			} else {
+				maxNotes = maxNotes * 1;
+			}
+			if (dueRange >= 0 && dueRange <= 9999) {
+				saveLocal("songBookDueRange", dueRange);
+				SBdata["songBookDueRange"] = dueRange;
+			}
+			if (maxNotes >= 0 && maxNotes <= 9999) {
+				saveLocal("songBookMaxRevNotes", maxNotes);
+				SBdata["songBookMaxRevNotes"] = maxNotes;
+			}
 		}
-		if (cols > 0 && cols < 9) {
+		if (cols > 0 && cols < 5) {
 			saveLocal("songBookCols", cols);
 			SBdata["CHcols"] = cols;
 		} else {
@@ -368,16 +393,13 @@ function settingsDialog() {
 		} else {
 			alert("Rows should be a number from 1 to 999");
 		}
-		if (SBdata["role"] == "O") {
-			if (dueRange >= 0 && dueRange < 999) {
-				saveLocal("songBookDueRange", dueRange);
-				SBdata["songBookDueRange"] = dueRange;
-			}
+		if (isOwner()) {
 		} else {
-			alert("Maximum days overdue should be a number from 0 to 999");
+			alert("Enter a number from 0 to 9999");
 		}
 		event.preventDefault();
 		dialog.close();
+		dialog.innerHTML = "";
 	})
 	dialog.showModal();
 }
@@ -531,7 +553,10 @@ function displayMetaLine(set, setTable) {
 }
 function displayChartLine(set, line, lineIndex, setTable) {
 	let setLineRow = setTable.insertRow();			// one row for each line in set, holds lineTable
-	if (line.length == 1 && line[0]["M"] == 'X') {
+	if (line === undefined) {
+		return false;
+	}
+	else if (line.length == 1 && line[0]["M"] == 'X') {
 		addTDtoTRnode(document.createElement("hr"), setLineRow);		// no cells, just a <hr>			
 		CHrec["linesInColumn"] += 1;
 	} else if (line.length > 0) {
@@ -577,6 +602,7 @@ function displayChartLine(set, line, lineIndex, setTable) {
 			} 
 		})
 		CHrec["linesInColumn"] += CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].length
+		return true;
 	}	
 }
 function createMetronomeDiv(id, divisor) {
@@ -602,12 +628,12 @@ function createPanelDiv(id) {
 	// panel will consist of metronomeTable and setTable
 	let metronomeTable = createMetronomeDiv(id, 2);
 	panelDiv.appendChild(metronomeTable);
-	let setTable = newBorderedTable();
+	let setTable = createBorderedTable();
 	setTable.setAttribute("id", `${id}setTable`);
 	panelDiv.appendChild(setTable);
 	return panelDiv;
 }
-function newBorderedTable(border=true) {
+function createBorderedTable(border=true) {
 	let tbl = document.createElement("table");
 	tbl.style.width = "100%";
 	if (border == true) {
@@ -628,15 +654,22 @@ async function saveChart(s) {
 	return chartStatus;
 }
 function showChart(arg) {
+	console.log(`in showChart with ${arg}`);
 	SBdata["metronomeStatus"] = "off";
+	console.log(`showChart calling CHmgr`);
 	let s = arg.substring(1);
 	let xhttp = new XMLHttpRequest();
 	xhttp.onreadystatechange = function() {
 		if (this.readyState == 4 && this.status == 200) {
 			CHrec = JSON.parse(this.responseText);
-			// console.log(CHrec);
-			if (Object.keys(CHrec).length == 0) {
-				alert("Problem creating chart, check log. If this is a brand-new record, you must save it before displaying chart.");
+			console.log(CHrec);
+			if (!Array.isArray(CHrec["sets"]) || !CHrec["sets"].length) {
+			// 	// array does not exist, is not an array, or is empty
+			// 	// ⇒ do not attempt to process array
+			//   }			
+			// if (Object.keys(CHrec).length == 0) {
+			// alert("Problem creating chart, check log. If this is a brand-new record, you must save it before displaying chart");
+				alert("Errors in chart; cannot be displayed"); 
 			} else {
 				CHrec["id"] = s;
 				CHrec["startTime"] = CHrec["elapsed"] = 0;
@@ -855,7 +888,7 @@ function convertChordToCode(chord, sourceLine, sourceLineIndex, cnvTable) {
 function displayMessages() {
 	$("messageArea").innerHTML = "";
 	let rslt = CHrec["errors"].pop();
-	let tbl = newBorderedTable();
+	let tbl = createBorderedTable();
 	let row = tbl.insertRow();
 	addTDtoTRtext(`${rslt["txt"]}: ${rslt["msg"]}`, row, "listText");
 	CHrec["errors"].forEach((obj) => {
@@ -865,7 +898,7 @@ function displayMessages() {
 	$("messageArea").appendChild(tbl);
 }
 function showChartIntegrated(setId) {
-	console.log(`in showChartInt, set ${setId}`);	// for cursor placement in NT input field
+	// alert(`in showChartInt, set ${setId}`);	// for cursor placement in NT input field
 	// this will create and save a record for reviewCharts.json
 	// chartTable will either display the assembled line, or the error that it gave
 	$("NT").disabled = false;
@@ -874,54 +907,63 @@ function showChartIntegrated(setId) {
 	let start = ((CHrec["sets"] != null) && (CHrec["sets"].length > 0)) ? 72 * CHrec["sets"][set]["meta"]["start"]: 0;
 	let end = ((CHrec["sets"] != null) && (CHrec["sets"].length > 0)) ? 72 * CHrec["sets"][set]["meta"]["end"]: 0;
 	$("NT").setSelectionRange(start, end);
-	let rightPanel = $("textArea");
 	sessionStorage.setItem('editRecord', JSON.stringify(SBlist));			// saving the edit screen to put back up when done, don't need if using modal
 	sessionStorage.setItem("screen", "chart");
-	rightPanel.innerHTML = '';
+	let leftPanel = $("infoArea");
+	leftPanel.innerHTML = '';
 	let actionBar = createDiv("actionBar", "listText");
 	let messageArea = createDiv("messageArea", "listText");
-	let chartTable = newBorderedTable();
-	rightPanel.appendChild(actionBar);
-	rightPanel.appendChild(messageArea);
-	rightPanel.appendChild(chartTable);
+	// let chartTable = newBorderedTable();
+	leftPanel.appendChild(actionBar);
+	leftPanel.appendChild(messageArea);
+	// rightPanel.appendChild(chartTable);
 	actionBar.appendChild(createButton("backButton", "chartButton", backButton, SBdata["constants"]["icons"]["close"], "close"));
 	actionBar.appendChild(createButton("renderButton", "chartButton", buildCHrec, "Render", "render chart from input and save"));
 	actionBar.appendChild(createButton("2-line paste", "chartButton", setTempo, SBdata["constants"]["icons"]["wand"], "starting tempo"));
-	}
+}
 function addTextRow(msg, tbl) {
 	let row = tbl.insertRow();
 	addTDtoTRtext(msg, row);
 }
 function createChartPage(e) {				// called when you press + for next chart page
 	if (e != null) { e.preventDefault(); }
-	tbl = newBorderedTable();
+	tbl = createBorderedTable();
 	let row = tbl.insertRow();
 	row.setAttribute("valign", "top");
 	CHrec["currentColumnIndex"] = 0;
 	CHrec["pageSetIndex"] = CHrec["currentSetIndex"];			// this is the set for the metronome setting
 	while (CHrec["currentColumnIndex"] < SBdata["CHcols"]) {
-		let setTable = newBorderedTable();												// this holds chart lines
+		let setTable = createBorderedTable();												// this holds chart lines
 		setTable.setAttribute("id", `column${CHrec["currentColumnIndex"]}setTable`);
 		addTDtoTRnode(setTable, row);
 		while (CHrec["linesInColumn"] < SBdata["CHlines"] && CHrec["currentSetIndex"] < CHrec["sets"].length) {
-			if (CHrec["currentLineIndex"] == 0) {				// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
+			if (CHrec["currentLineIndex"] == 0) {	// metaLine hasn't been displayed yet, only show it if there's also room for first line of set
 				if (CHrec["linesInColumn"] + 1 + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].length < SBdata["CHlines"]) {	// still room for meta line and at least first lines
 					displayMetaLine(CHrec["sets"][CHrec["currentSetIndex"]], setTable);
 				} else {
 					CHrec["linesInColumn"] = SBdata["CHlines"];
 				}
 			}
+			if (CHrec["sets"].length < 1 && !("lines" in CHrec["sets"])) {
+				alert("chart not set up for display");
+				return;
+			}
 			if (CHrec["linesInColumn"] + CHrec["sets"][CHrec["currentSetIndex"]]["meta"]["PTN"].length < SBdata["CHlines"]) {	// room for next line
-				displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable);
-				CHrec["currentLineIndex"] += 1;
-				if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
-					CHrec["currentSetIndex"] += 1;
-					if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
-						CHrec["currentLineIndex"] = 0;
-					} else {
-						CHrec["linesInColumn"] = SBdata["CHlines"];
+				if (displayChartLine(CHrec["sets"][CHrec["currentSetIndex"]], CHrec["sets"][CHrec["currentSetIndex"]]["lines"][CHrec["currentLineIndex"]], CHrec["currentLineIndex"], setTable)) {
+					CHrec["currentLineIndex"] += 1;
+					if (CHrec["currentLineIndex"] == CHrec["sets"][CHrec["currentSetIndex"]]["lines"].length) {
+						CHrec["currentSetIndex"] += 1;
+						if (CHrec["currentSetIndex"] < CHrec["sets"].length) {
+							CHrec["currentLineIndex"] = 0;
+						} else {
+							CHrec["linesInColumn"] = SBdata["CHlines"];
+						}
 					}
-				}
+				} else {
+					alert("chart has no displayable content");
+					CHrec["currentSetIndex"] = 999;
+					return;
+				} 
 			} else {				// need to make a new column
 				CHrec["linesInColumn"] = SBdata["CHlines"];
 			}
@@ -987,20 +1029,24 @@ function showTime(){
 	CHrec["elapsed"] = parseInt((current - CHrec["startTime"]) / 1000);	
 	document.getElementsByClassName("clock")[0].innerHTML = timerDisplay(CHrec["elapsed"]);
 }
-function showChartInModal(type)
+function showChartInModal(type, songId)
 {
-	// alert('in showChartInModal, argument is ' + s);
+	// console.log(CHrec);
+	// let's spawn it to another page, like we do with the "reports page"
+	// openLink('../programs/displayChart.py?songId=' + songId);
 	CHrec["currentLineIndex"] = CHrec["currentSetIndex"] = CHrec["linesInColumn"] = CHrec["currentPageIndex"] = 0;
 	CHrec["pages"] = [];
 	CHrec["screen"] = type;
+	// let srchResults = $("searchResults");
+	// srchResults.innerHTML = "";
 	let cPanel = $('cPanel');
 	cPanel.innerHTML = '';
-	let bottomTable = newBorderedTable();
+	let bottomTable = createBorderedTable();
 	cPanel.appendChild(bottomTable);
 	let row = bottomTable.insertRow();
 	row.style.backgroundColor = "green";
 	addTDtoTRnode(createButton("backButton", "chartButton", backButton, SBdata["constants"]["icons"]["close"], "close"), row);
-	if (CHrec["sets"][0]["meta"]["BPM"] != "000") {
+	if ("000" != CHrec["meta"]["BPM"]) {
 		addTDtoTRnode(createButton("tempoButton", "chartButton", playMetronome, SBdata["constants"]["icons"]["tempo"], "start metronome"), row);
 		// addTDtoTRnode(createButton("setTempo", "chartButton", setTempo, SBdata["constants"]["icons"]["wand"], "starting tempo"), row);
 	}
@@ -1014,6 +1060,7 @@ function showChartInModal(type)
 	}
 	addTDtoTRnode(createButton("prevButton", "chartButton", displayPrevChartPage, SBdata["constants"]["icons"]["previous"], "previous page", false, true), row);
 	addTDtoTRnode(createButton("nextButton", "chartButton", displayNextChartPage, SBdata["constants"]["icons"]["next"], "next page", false, true), row);
+	// addTDtoTRnode(createButton(`sched${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule ${SBlist["songs"][rec]["TT"]}`), row);
 	addTDtoTRnode(createMetronomeDiv("bottomDiv", 1), row);
 	while (CHrec["currentSetIndex"] < CHrec["sets"].length) {
 		createChartPage();
@@ -1023,7 +1070,6 @@ function showChartInModal(type)
 // When the user clicks the button, open the modal
 function showHistory(s)
 {
-	console.log(`songbook.js=>showHistory("${s}")`);
 	let xhttp = new XMLHttpRequest();
 	let modal = $('myModal');
 	(document.getElementsByClassName("close")[0]).onclick = function()
@@ -1128,11 +1174,19 @@ function openLink(x)
 }
 function scheduleAndSave(days, songId)
 {
-	// console.log(`scheduleAndSave: ${dueDate}, ${bNum}, ${songId}, ${e.target.id}`);
 	let dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + days);
 	$("RN").disabled = false;
 	$("RN").value = dueDate.toISOString().substring(0, 10);
+	// let temp = $("revNote");
+	// if (temp > "") {
+	// 	if ("revNotes" in SBlist["songs"][songId]) {
+	// 		SBlist["songs"][songId]["revNotes"].unshift({"date": (new Date()).getDate.toString(), "note": temp});
+	// 	} else {
+	// 		SBlist["songs"][songId]["revNotes"] = [];
+	// 		SBlist["songs"][songId]["revNotes"].push({"date": (new Date()).getDate.toString(), "note": temp});
+	// 	}
+	// }
 	document.gForm.oper.value = "S" + songId;
 	document.gForm.submit();
 }
@@ -1164,7 +1218,7 @@ function addTag(ctg)
 	}
 }
 function editSong(id) {
-	oper = `E${id}`;
+	let oper = `E${id}`;
 	for (i = 0; i < 7; i++)
 	{
 		// if TYP is enabled, corresponding LBL and VAL must be filled, else disable all
@@ -1196,7 +1250,8 @@ function editSong(id) {
 	}
 	$("RN").disabled = false;
 	$("NT").disabled = false;
-	let RN = $("customRN");
+	// let RN = $("customRN");
+	let RN = $("RN");
 	if (RN.value <= (new Date()).toISOString().split('T')[0]) {
 		if (!(confirm("Save without scheduling?"))) {
 			RN.focus();
@@ -1275,7 +1330,7 @@ function doSearch(s)
 		if ($("sDisplay") != null) {
 			$('smallModal').style.display = "none";
 		} 
-		if (SBdata["role"] == "O") {
+		if (isOwner()) {
 				if ($("saveButton") != null) {
 				// if save is enabled, then you have unsaved changes, so prompt to save
 				if (typeof CHrec != "undefined" && $("saveButton").disabled == false) 
@@ -1330,7 +1385,7 @@ function detailHeaderRow(tbl) {
 	let row = tbl.insertRow();
 	let displacement = 0;
 	// title header
-	if (SBlist["title"] != "edit") {
+	if (!(isEditMode)){
 		let elem = document.createElement("td");
 		elem.title = "Sort by Title";
 		let lnk = document.createElement("a");
@@ -1339,13 +1394,13 @@ function detailHeaderRow(tbl) {
 		lnk.text = "Title"; 
 		elem.appendChild(lnk);
 		row.appendChild(elem);
-		displacement = addHiddenSortHeader(row, 0, "DK");										// deck -- hidden
-		if (SBdata["role"] == "O") {
-			displacement = addHiddenSortHeader(row, displacement, "RN");										// due date -- hidden
-			displacement = addHiddenSortHeader(row, displacement, "RA");										// average number of reviews -- hidden
-			displacement = addHiddenSortHeader(row, displacement, "RT");										// total number of reviews -- hidden
+		displacement = addHiddenSortHeader(row, 0, "DK");								// deck -- hidden
+		if (isOwner()) {
+			displacement = addHiddenSortHeader(row, displacement, "RN");				// due date -- hidden
+			displacement = addHiddenSortHeader(row, displacement, "RA");				// average number of reviews -- hidden
+			displacement = addHiddenSortHeader(row, displacement, "RT");				// total number of reviews -- hidden
 		}
-		addTDtoTRtext(SBdata["constants"]["icons"]["info"], row, "chartMeta");						// this is why it'll be displacement+1 for the offset
+		addTDtoTRtext(SBdata["constants"]["icons"]["info"], row, "chartMeta");		// why it'll be displacement+1 for offset
 	} else {
 		addTDtoTRtext("Title", row, "chartMeta");
 	}
@@ -1355,7 +1410,7 @@ function detailHeaderRow(tbl) {
 		let div = createDiv("hoverDiv", "hoverContainer");
 		let hover = document.createElement("span");
 		hover.className = "hoverText";
-		if (SBlist["title"] != "edit") {
+		if (!(isEditMode)){
 			th.appendChild(sortLink(index + displacement + 1, SBdata["config"]["tagCtgs"][item]["title"], "chartMeta"));
 			div.appendChild(document.createTextNode(SBdata["constants"]["icons"]["search"]));
 			(Object.keys(SBdata["tagData"][item])).sort().forEach((tag) => {
@@ -1413,9 +1468,11 @@ function songAction(e) {
 	// alert (`songAction: type: got here, type is ${type}, songId is ${songId}`);
 	if (type == "sched") {
 		showDetail(songId);
-	} else if (type == "lchrt") {
+	} else if (type == "edit ") {			// close the scheduling page
+		execSearch(`o${songId}`);
+	} else if (type == "lchrt") {			// looking at the chart
 		$(`title${songId}`).style.backgroundColor = "goldenrod";			// highlight the title of the song for when you come back
-		showChart(`L${songId}`);
+		showChart(`L${songId}`);	
 	} else if (type == "fchrt") {	
 		showChart(`F${songId}`);
 	} else if (type == "echrt") {
@@ -1482,177 +1539,29 @@ function makeHoverDiv(item, hoverText) {
 	div.appendChild(makeHoverSpan(hoverText));
 	return div;
 }
-function detailLine(rec, tbl) {
-	// set up tables for detail display
-	let tableArray = new Array();
-	let detailTable = document.createElement("table");			// whole display
-	let drow = detailTable.insertRow();
-	drow.style.verticalAlign = "top";
-	let hover = tdText = "";
-	let classNames = ['Info', 'Tags', 'Schd'];
-	// this sets up the detailTable for scheduling and browsing
-	for (let i = 0; i < 3; i++) {
-		tableArray.push(document.createElement("table"));				// fields
-		tableArray[i].border = "1px solid black";
-		tableArray[i].className = classNames[i];
-		// addTDtoTRnode(tableArray[i], drow);
-	}
-	[2, 0, 1].forEach((item) => { 
-		addTDtoTRnode(tableArray[item], drow);
-	});
-	let row = tbl.insertRow();
-	row.className = "songRow";
-	row.style.backgroundColor = SBdata["config"]["decks"][SBlist["songs"][rec]["DK"]]["color"];
-	let hoverInfo = js = '';
-	if (SBlist["title"] != "edit") {
-		if (SBdata["role"] != "O") {
-			hoverInfo = `Details about ${rec}: ${SBlist["songs"][rec]["TT"]}`;
-			js = "javascript:showDetail('" + rec + "')";
-		} else {
-			hoverInfo = `<b>ID: </b>${rec}`;
-			js = "javascript:doSearch('o" + rec + "')";
-		}
-	}
-	["TT", "DK", "RN", "RL", "CD", "RT", "RA", "CS"].forEach((item) => {
-		if (SBlist["title"] != "edit") {
-			if (SBdata["role"] == "O") {
-				hoverInfo = `${hoverInfo}<br><b>${SBdata["constants"]["fields"][item]["title"]}: </b>${SBlist["songs"][rec][item]}`;
-			}
-		}	
-		let r = tableArray[0].insertRow();
-		addTDtoTRtext(SBdata["constants"]["fields"][item]["title"], r, "songDetail");
-		if (item != "RL") {
-			addTDtoTRtext(SBlist["songs"][rec][item], r, "songDetail");
-		} else {
-			addTDtoTRtext(getElapsedDays(SBlist["songs"][rec][item], 0)["text"], r, "songDetail");
-		}
-	});
-	if (SBlist["title"] != "edit") {
-		let lnk = detailLinkTD(SBlist["songs"][rec]["TT"], js, hoverInfo, row);
-		lnk.id = `title${rec}`;
-		addHiddenTD(row, SBlist["songs"][rec]["DK"]);
-		// action bar
-		let actionBar = createDiv("actionBar", "actions");
-		actionBar.style.border = "1px solid black";
-		if (SBdata["role"] == "O") {
-			addHiddenTD(row, SBlist["songs"][rec]["RN"]);
-			addHiddenTD(row, SBlist["songs"][rec]["RA"]);
-			addHiddenTD(row, SBlist["songs"][rec]["RT"]);
-			actionBar.appendChild(createButton(`sched${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["schedule"], `Schedule ${SBlist["songs"][rec]["TT"]}`));
-		} else {
-			// like buttons for User role. If there's already a tag for this user, highlight it, id it as "N", and clicking will turn it off -- "Y" will turn it on
-			let id, clr;
-			if (SBlist["songs"][rec]["TG"].includes(SBdata["userName"])) {
-				id = `likeN${rec}`;
-				clr = "lightgreen";
-			} else {
-				id = `likeY${rec}`;
-				clr = "lavender";
-			}
-			actionBar.appendChild(createButton(id, "pnlButton", songAction, SBdata["constants"]["icons"]["like"], `Add ${SBlist["songs"][rec]["TT"]} to set`));
-			actionBar.childNodes[0].childNodes[0].style.backgroundColor = clr; // outerDiv is action bar's first child, button is outerDiv's first
-		}
-		if (SBlist["songs"][rec]["CS"] > SBdata["constants"]["chartStatus"]["NONE"]) {
-			actionBar.appendChild(createButton(`lchrt${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Chord chart for ${SBlist["songs"][rec]["TT"]}`));
-			if (SBlist["songs"][rec]["CS"] > SBdata["constants"]["chartStatus"]["NOPDF"]) {
-				actionBar.appendChild(createButton(`pdf  ${rec}`, "pnlButton", songAction, "pdf", `PDF of chart for ${rec}`, true));
-			}
-		}
-		Object.keys(SBlist["songs"][rec]["SB"]).forEach((item) => {
-			let titleInfo = getCannedLabel(item);
-			actionBar.appendChild(createButton(`media${rec}${item}`, "pnlButton", songAction, titleInfo["label"], titleInfo["hover"]));
-		});
-		Object.keys(SBlist["songs"][rec]["LL"]).forEach((item) => {
-			let titleInfo = getCannedLabel(item);
-			actionBar.appendChild(createButton(`link ${rec}${item}`, "pnlButton", songAction, titleInfo["label"], titleInfo["hover"]));
-		});
-		addTDtoTRnode(actionBar, row);
-	} else {
-		detailLinkTD(SBlist["songs"][rec]["TT"], js, `ID: ${rec}`, row);
-	}
-	SBdata["config"]["tagOrder"].forEach((item, index) => {
-		let moreCount = 0;
-		let firstTag = "";
-		hover = tdText = "";
-		if (SBlist["title"] == "edit") {
-			tdText = document.createElement("td");		
-			tdText.className = "songDetail";
-		}
-		SBlist["songs"][rec]["TG"].forEach((tag) => {
-			if (tag.substring(0, 1) == item) {
-				let r = tableArray[1].insertRow();
-				addTDtoTRtext(SBdata["config"]["tagCtgs"][item]["title"], r, "songDetail");
-				addTDtoTRtext(tag.substring(1), r, "songDetail");
-				if (SBlist["title"] != "edit") {
-					hover = `${hover}${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)<br>`;
-					if (tdText == "") {
-						tdText = tag.substring(1);
-						firstTag = tag;
-					} else {
-						moreCount += 1;
-					}
-				} else {
-					let lnk = document.createElement("a");
-					lnk.className = "listItem";
-					lnk.href = `javascript:doSearch('${tag}')`;
-					lnk.text = tag.substring(1);
-					let div1 = makeHoverDiv(lnk, `Search for tag ${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)`);
-					let chkBox = document.createElement("input");
-					chkBox.type = "checkbox";
-					chkBox.id = chkBox.name = `del${tag}`;
-					chkBox.onchange = function() {enableSave()};
-					let div2 = makeHoverDiv(chkBox, `Remove tag ${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)`);
-					tdText.appendChild(div1);
-					tdText.appendChild(div2);
-					tdText.appendChild(document.createElement("br"));
-				}
-			}
-		});
-		if (SBlist["title"] != "edit") {
-			if (moreCount > 0) {
-				tdText = `${tdText} (+${moreCount})`;
-			}
-			let lnk = document.createElement("a");
-			lnk.className = "listItem";
-			lnk.href = `javascript:doSearch('${firstTag}')`;
-			lnk.text = firstTag.substring(1);
-			detailLinkTD(tdText, `javascript:doSearch('${firstTag}')`, hover, row);	
-		} else {
-			row.appendChild(tdText);
-		}
-	});
+function songDetailLine(rec, listTable) {
+	// creates the entire detail line display, plus schd, data, tags, and actions html stashed in record
+	createSchdDisplay(rec);  		//creates SBlist["songs"][rec]["HTMLSched"]
+	createDataDisplay(rec);			//creates SBlist["songs"][rec]["HTMLData"] 
+	let listDetailRow = listTable.insertRow();
+	listDetailRow.className = "songRow";
+	listDetailRow.style.backgroundColor = SBdata["config"]["decks"][SBlist["songs"][rec]["DK"]]["color"];
+	if (isOwner()) {					// first couple of columns of detail row
+		addHiddenTD(listDetailRow, SBlist["songs"][rec]["RN"]);
+		addHiddenTD(listDetailRow, SBlist["songs"][rec]["RA"]);
+		addHiddenTD(listDetailRow, SBlist["songs"][rec]["RT"]);
+	}	
+	let hoverInfo = `Details about ${rec}: ${SBlist["songs"][rec]["TT"]}`;
+	let js = "javascript:showDetail('" + rec + "')";
+	let lnk = detailLinkTD(SBlist["songs"][rec]["TT"], js, hoverInfo, listDetailRow);
+	lnk.id = `title${rec}`;
+	addHiddenTD(listDetailRow, `${SBlist["songs"][rec]["DK"]} ${SBdata["config"]["decks"][SBlist["songs"][rec]["DK"]]}`);
+	createActionBar(rec);
+	createTagDisplays(rec, listDetailRow);
 	Object.keys(SBdata["config"]["userFields"]).forEach((item) => {
 		let r = (isNaN(parseInt(SBlist["songs"][rec][item]))) ? 0 : parseInt(SBlist["songs"][rec][item]);
-		detailLinkTD(timerDisplay(r), "", `${r} seconds`, row);
-		let rr = tableArray[0].insertRow();
-		addTDtoTRtext(SBdata["config"]["userFields"][item]["title"], rr, "songDetail");
-		addTDtoTRtext(timerDisplay(SBlist["songs"][rec][item]), rr, "songDetail");
+		detailLinkTD(timerDisplay(r), "", `${r} seconds`, listDetailRow);
 	});
-	if (SBdata["role"] == "O") {
-		r = tableArray[2].insertRow();
-		let dueDate = createInputElement("date", 0, 0, "RN", "Due", SBlist["songs"][rec]["RN"]);
-		dueDate.className = "songDetail";
-		dueDate = addTDtoTRnode(dueDate, r);
-		dueDate.setAttribute("colspan", 2);
-		SBlist["songs"][rec]["elapsed"] = getElapsedDays(SBlist["songs"][rec]["RL"], 0)["value"];
-		SBlist["songs"][rec]["origSched"] = getElapsedDays(SBlist["songs"][rec]["RL"], SBlist["songs"][rec]["RN"])["value"];
-		SBdata["config"]["reviewOptions"].forEach ((item, index) => {
-			if (index % 2 == 0) {
-				r = tableArray[2].insertRow();
-			}
-			addTDtoTRnode(createButton(`b${item[1]}`, "songDetail", songAction, item[0], getFutureDate(item[1])), r);
-		});
-		r = tableArray[2].insertRow();
-		let revNote = createInputElement("text", 0, 32, "revNote", "Review Note", "");
-		revNote.placeholder = "review note";
-		revNote = addTDtoTRnode(revNote, r);
-		revNote.setAttribute("colspan", 2);
-	}
-	let td = document.createElement("td");
-	td.hidden = "true";
-	td.id = `detail${rec}`;
-	td.appendChild(detailTable);
-	row.appendChild(td);
 }
 function execSearch(s, typ = "L")
 {
@@ -1665,10 +1574,10 @@ function execSearch(s, typ = "L")
 				$("message").innerHTML = this.responseText;
 			} else {
 				SBlist = JSON.parse(this.responseText);
-				if (SBlist["title"] == "edit") {
+				if (SBlist["title"] == "edit") {	// one record only
 					sessionStorage.setItem("editRecord", JSON.stringify(SBlist));
 					sessionStorage.setItem("screen", "edit");
-				} else {
+				} else {							// list of songs	
 					sessionStorage.setItem("SBlist", JSON.stringify(SBlist));
 					sessionStorage.setItem("screen", "list");
 				}
@@ -1679,7 +1588,7 @@ function execSearch(s, typ = "L")
 					let dialog = buildDialog (`Admin for ${SBdata["repository"]}`, "Save changes");
 					dialog.childNodes[0].disabled = true;
 					let form = dialog.childNodes[1];
-					let userTable = newBorderedTable();
+					let userTable = createBorderedTable();
 					form.appendChild(userTable);
 					(Object.keys(SBlist["users"])).forEach((item) => {
 						let row = userTable.insertRow();
@@ -1745,15 +1654,17 @@ function getFutureDate(daysToAdd) {
 function displaySong() {
 	let srchResults = $("searchResults");
 	srchResults.innerHTML = "";
-	let listTable = newBorderedTable(false);
+	let listTable = createBorderedTable(false);
 	listTable.id = "detailTable";
-	if (SBlist["title"] != "edit") {
-		let titleTable = newBorderedTable(false);
+	if (!(isEditMode())){
+		let titleTable = createBorderedTable(false);
+		titleTable.id = "titleTable";
+		titleTable.style.backgroundColor = "#CCC";
 		let titleRow = titleTable.insertRow();
 		addTDtoTRtext(`${SBlist["title"]}`, titleRow, "songDetail");
 		addTDtoTRtext("Sort by: ", titleRow, "songDetail");
 		addTDtoTRnode(sortLink(1, "Deck", "songDetail"), titleRow, "songDetail");
-		if (SBdata["role"] == "O") {
+		if (isOwner()) {
 			addTDtoTRnode(sortLink(2, "Due Date", "songDetail"), titleRow, "songDetail");
 			addTDtoTRnode(sortLink(3, "Avg Number of Reviews", "songDetail"), titleRow, "songDetail");
 			addTDtoTRnode(sortLink(4, "Total Number of Reviews", "songDetail"), titleRow, "songDetail");
@@ -1766,14 +1677,17 @@ function displaySong() {
 	Object.keys(SBlist["songs"]).forEach((item) => {
 		let dk = parseInt(SBlist["songs"][item]["DK"]);
 		if (SBdata["deckString"].substring(dk, dk + 1) == "1") {
-			detailLine(item, listTable);
+			songDetailLine(item, listTable);
 		}
 	});
+	// if you had a list and you've run through it, you're done. otherwise, edit screen
 	if (SBlist["title"] == "edit") {
 		let songId = Object.keys(SBlist["songs"]);
 		let rec = SBlist["songs"][songId];
+		console.log(`edit screen for ${songId}`);
+		console.log(rec);
 		document.gForm.CS.value = rec ["CS"];
-		let reviewArea = newBorderedTable(false);
+		let reviewArea = createBorderedTable(false);
 		srchResults.appendChild(reviewArea);
 		let reviewRow = reviewArea.insertRow();
 		reviewRow.style.verticalAlign = "top";
@@ -1916,23 +1830,24 @@ function displaySong() {
 				div.appendChild(item);
 			});
 		});
-		let infoAndTagAdd = newBorderedTable();
+		let infoAndTagAdd = createBorderedTable();
 		infoPanel.appendChild(infoAndTagAdd);
 		let infoTagRow = infoAndTagAdd.insertRow();
 		infoTagRow.style.verticalAlign = "top";
-		let infoTable = newBorderedTable(true);
-		let tagAdd = newBorderedTable(true);
+		let infoTable = createBorderedTable(true);
+		let tagAdd = createBorderedTable(true);
 		let  it = addTDtoTRnode(infoTable, infoTagRow);
 		it.setAttribute("width", "50%");
 		addTDtoTRnode(tagAdd, infoTagRow);
-		let urlAdd = newBorderedTable(true);
+		let urlAdd = createBorderedTable(true);
 		infoPanel.appendChild(urlAdd);
 		infoRow = infoTable.insertRow();
 		addTDtoTRnode(createLabel("Next Review:"), infoRow, "songDetail");
 		let rn = document.createElement("input");
 		rn.type = "date";
 		rn.className = "songDetail";
-		rn.id = rn.name = "customRN";
+		// rn.id = rn.name = "customRN";
+		rn.id = rn.name = "RN";
 		rn.value = rec["RN"];
 		enableES(rn);
 		addTDtoTRnode(rn, infoRow);
@@ -2006,30 +1921,26 @@ function cvtIconToCRLF(text) {
 	return returnText;
 }
 function showDetail(songId) {
-	if ($("saveButton") != null) {
-		if ($("saveButton").disabled == false) {			// true if there have been edits
-			if (confirm("You have unsaved changes that will be lost if you use the scheduling buttons.") == false) {
-				return;
-			}
-		}		
-	}
-	let modal = $('smallModal');
-	$('sClose').onclick = function()
-	{
-		modal.style.display = "none";
-	}
-	window.onclick = function(event) {	// if you click outside the modal, it will close
-		if (event.target == modal) {
-			modal.style.display = "none";
-		}
-	}
-	sDisplay.innerHTML = $("detail" + songId).innerHTML;
-	if (SBdata["role"] == "O") {
-		$("RN").value = SBlist["songs"][songId]["RN"];
-		$("RN").disabled = true;
-	}
-	modal.style.display = "block";
-	if (SBdata["role"] == "O") {
+	// console.log("showDetail for " + songId);
+	let srchResults = $("searchResults");
+	srchResults.removeChild(document.getElementById("titleTable"));
+	srchResults.removeChild(document.getElementById("detailTable"));
+	['HTMLActionBar', 'HTMLSched', 'HTMLData', 'HTMLTags'].forEach((item) => {
+		let temp = createDiv(item, "panel");
+		temp.innerHTML = SBlist["songs"][songId][item];
+		srchResults.append(temp);
+	});
+	// add listeners for actions
+	if (isOwner()) {
+		let btn = $(`edit ${songId}`);
+		btn.addEventListener("click", (event) => {
+			execSearch(`o${songId}`);
+		});
+		btn = $(`close${songId}`);
+		btn.addEventListener("click", (event) => {
+			cancelEdit();
+		});
+		// add listeners for scheduling buttons
 		SBdata["config"]["reviewOptions"].forEach ((item) => {
 			let btn = $(`b${item[1]}`);
 			btn.addEventListener("click", (event) => {
@@ -2039,11 +1950,13 @@ function showDetail(songId) {
 				btn.style.backgroundColor = "goldenrod";
 			}
 		});
+		$("RN").value = SBlist["songs"][songId]["RN"];
+		$("RN").disabled = true;
 	}
 }
 function cancelEdit() {
 	if ($("saveButton") != null) {
-		if ($("saveButton").disabled == false) {			// true if you're on the edit screen and there have been edits
+		if ($("saveButton").disabled == false) {	// true if you're on the edit screen and there have been edits
 			if (confirm("You have unsaved changes that will be lost if you proceed.") == false) {
 				return;
 			}
@@ -2103,5 +2016,199 @@ function backButton(e) {
 	} else {
 		$('chartModal').style.display = "none";
 	}
-	if (e != null) { e.preventDefault(); }	
+	if (e != null) { e.preventDefault(); }
+}
+// **************************************starting to put methods below on 5/29/25
+function createActionBar(rec) {
+	// put all available actions in a div for use later
+	let actionBar = createDiv("actionBar", "panel");
+	let title = document.createElement("span");
+	title.style.fontSize = "1.6em";
+	title.style.fontWeight = "bold";
+	title.innerText = SBlist["songs"][rec]["TT"];
+	actionBar.appendChild(title);
+	actionBar.appendChild(createButton(`close${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["close"], `Close`));
+	if (!(isOwner())) {
+		// like buttons for User role. If there's already a tag for this user, highlight it, id it as "N", and clicking will turn it off -- "Y" will turn it on
+		let id, clr;
+		if (SBlist["songs"][rec]["TG"].includes(SBdata["userName"])) {
+			id = `likeN${rec}`;
+			clr = "lightgreen";
+		} else {
+			id = `likeY${rec}`;
+			clr = "lavender";
+		}
+	} else {
+		// owner-only actions are edit song and edit chart
+		actionBar.appendChild(createButton(`edit ${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["edit"], `Edit song record for ${SBlist["songs"][rec]["TT"]}`));			
+	}
+	// for any role: exit, view chart, links, and SBs
+	let chartStatus = SBlist["songs"][rec]["CS"];
+	if ( chartStatus > SBdata["constants"]["chartStatus"]["NONE"]) {
+		actionBar.appendChild(createButton(`lchrt${rec}`, "pnlButton", songAction, SBdata["constants"]["icons"]["chart"], `Chord chart for ${SBlist["songs"][rec]["TT"]}`));
+		if (chartStatus > SBdata["constants"]["chartStatus"]["NOPDF"]) {
+			actionBar.appendChild(createButton(`pdf  ${rec}`, "pnlButton", songAction, "pdf", `PDF of chart for ${rec}`, true));
+		}
+		Object.keys(SBlist["songs"][rec]["SB"]).forEach((item) => {
+			let titleInfo = getCannedLabel(item);
+			actionBar.appendChild(createButton(`media${rec}${item}`, "pnlButton", songAction, titleInfo["label"], titleInfo["hover"]));
+		});
+		Object.keys(SBlist["songs"][rec]["LL"]).forEach((item) => {
+			let titleInfo = getCannedLabel(item);
+			actionBar.appendChild(createButton(`link ${rec}${item}`, "pnlButton", songAction, titleInfo["label"], titleInfo["hover"]));
+		});
+	}	
+	SBlist["songs"][rec]["HTMLActionBar"] = actionBar.outerHTML;
+}	
+function createTagDisplays(rec, detailRow) {
+	// if edit, list all tags with checkBoxes for deletion
+	// else, list only first tag of each category, with +
+	// for all tags, add a row to the tableHTML for each one
+	let tableHTML = createBorderedTable();
+	// look for tags in order
+	SBdata["config"]["tagOrder"].forEach((item, index) => {
+		let moreCount = 0;
+		let firstTag = "";
+		let hover = tdText = "";
+		if (isEditMode()) {
+			tdText = document.createElement("td");		
+			tdText.className = "songDetail";
+		}
+		SBlist["songs"][rec]["TG"].forEach((tag) => {
+			// console.log(`looking for ${item}, tag is ${tag}, row is ${row}`);
+			if (tag.substring(0, 1) == item) {
+				// console.log("found " + tag + ", editMode is " + isEditMode());
+				let r = tableHTML.insertRow();
+				addTDtoTRtext(SBdata["config"]["tagCtgs"][item]["title"], r, "songDetail");
+				addTDtoTRtext(tag.substring(1), r, "songDetail");
+				if (!isEditMode()){	// if list, just show first tag
+					hover = `${hover}${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)<br>`;
+					if (tdText == "") {
+						tdText = tag.substring(1);
+						firstTag = tag;
+					} else {
+						moreCount += 1;
+					}
+				} else {	// for edit screen, show all tags with associated checkboxes 
+					let lnk = document.createElement("a");
+					lnk.className = "listItem";
+					lnk.href = `javascript:doSearch('${tag}')`;
+					lnk.text = tag.substring(1);
+					let div1 = makeHoverDiv(lnk, `Search for tag ${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)`);
+					let chkBox = document.createElement("input");
+					chkBox.type = "checkbox";
+					chkBox.id = chkBox.name = `del${tag}`;
+					chkBox.onchange = function() {enableSave()};
+					let div2 = makeHoverDiv(chkBox, `Remove tag ${SBdata["config"]["tagCtgs"][item]["title"]}: ${tag.substring(1)} (${SBdata["tagData"][item][tag.substring(1)]} songs)`);
+					tdText.appendChild(div1);
+					tdText.appendChild(div2);
+					tdText.appendChild(document.createElement("br"));
+				}
+			}
+		});
+		if (!(isEditMode())){
+			if (moreCount > 0) {
+				tdText = `${tdText} (+${moreCount})`;
+			}
+			let lnk = document.createElement("a");
+			lnk.className = "listItem";
+			lnk.href = `javascript:doSearch('${firstTag}')`;
+			lnk.text = firstTag.substring(1);
+			detailLinkTD(tdText, `javascript:doSearch('${firstTag}')`, hover, detailRow);	
+		} else {
+			detailRow.appendChild(tdText);
+		}
+	});
+	SBlist["songs"][rec]["HTMLTags"] = tableHTML.outerHTML;
+}	
+function createDataDisplay(rec) {
+	// you'll always have a detail line, even if you're in edit mode
+	let tableHTML = createBorderedTable();
+	let hoverInfo = js = '';
+	if (!(isEditMode())){
+		if (SBdata["role"] != "O") {
+			hoverInfo = `Details about ${rec}: ${SBlist["songs"][rec]["TT"]}`;
+			js = "javascript:showDetail('" + rec + "')";
+		} else {
+			hoverInfo = `<b>ID: </b>${rec}`;
+			js = "javascript:doSearch('o" + rec + "')";
+		}
+	}
+	// a label, data row for each attribute
+	let rowHTML = tableHTML.insertRow();
+	addTDtoTRtext("ID", rowHTML, "songDetail");
+	addTDtoTRtext(rec, rowHTML, "songDetail");
+	["TT", "DK", "RN", "RL", "CD", "RT", "RA", "CS"].forEach((item) => {
+		if (!(isEditMode)){
+			if (isOwner()) {
+				hoverInfo = `${hoverInfo}<br><b>${SBdata["constants"]["fields"][item]["title"]}: </b>${SBlist["songs"][rec][item]}`;
+			}
+		}	
+		rowHTML = tableHTML.insertRow();
+		addTDtoTRtext(SBdata["constants"]["fields"][item]["title"], rowHTML, "songDetail");
+		if (item != "RL") {
+			addTDtoTRtext(SBlist["songs"][rec][item], rowHTML, "songDetail");
+		} else {
+			addTDtoTRtext(getElapsedDays(SBlist["songs"][rec][item], 0)["text"], rowHTML, "songDetail");
+		}
+	});
+	Object.keys(SBdata["config"]["userFields"]).forEach((item) => {
+		let rr = tableHTML.insertRow();
+		addTDtoTRtext(SBdata["config"]["userFields"][item]["title"], rr, "songDetail");
+		addTDtoTRtext(timerDisplay(SBlist["songs"][rec][item]), rr, "songDetail");
+	});
+	SBlist["songs"][rec]["HTMLData"] = tableHTML.outerHTML;
+}
+function createSchdDisplay(rec) {
+	if (!(isOwner())) {	
+		SBlist["songs"][rec]["HTMLSched"] = "";
+	} else {
+		let tableHTML = createBorderedTable();
+		let row = tableHTML.insertRow();
+		let dueDate = createInputElement("date", 0, 0, "RN", "Due", SBlist["songs"][rec]["RN"]);
+		dueDate.className = "songDetail";
+		dueDate = addTDtoTRnode(dueDate, row);
+		dueDate.setAttribute("colspan", 2);
+		SBlist["songs"][rec]["elapsed"] = getElapsedDays(SBlist["songs"][rec]["RL"], 0)["value"];
+		SBlist["songs"][rec]["origSched"] = getElapsedDays(SBlist["songs"][rec]["RL"], SBlist["songs"][rec]["RN"])["value"];
+		SBdata["config"]["reviewOptions"].forEach ((item, index) => {
+			if (index % 2 == 0) {
+				row = tableHTML.insertRow();
+			}
+			addTDtoTRnode(createButton(`b${item[1]}`, "songDetail", songAction, item[0], getFutureDate(item[1])), row);
+		});
+		row = tableHTML.insertRow();
+		let revNote = createInputElement("text", 0, 32, "revNote", "Review Note", "");
+		// revNote.id = revNote.name = "revNote";
+		revNote.placeholder = "review note";
+		revNote = addTDtoTRnode(revNote, row);
+		revNote.setAttribute("colspan", 2);
+		// let maxRevNotes = localStorage.getItem("songBookMaxRevNotes");
+		// console.log(SBlist["songs"][rec]);
+		if ("revNotes" in SBlist["songs"][rec]) {
+			SBlist["songs"][rec]["revNotes"].forEach((item) => {
+				row = tableHTML.insertRow();
+				addTDtoTRtext(`${item["date"]}: ${item["note"]}`, row, "songDetail");
+			});
+		}
+		SBlist["songs"][rec]["HTMLSched"] = tableHTML.outerHTML;
+	}	
+}
+function scrBreadCrumb(name, value, screen = "list") {
+	// sessionStoage[name] current value will be returned, and replaced by [value]
+	let rtn = sessionStorage.getItem("name");
+	sessionStorage.setItem("screen", screen);
+	sessionStorage.setItem(name, value);
+}
+function isEditMode() {
+	if (SBlist["title"] == "edit") {
+		return true;
+	}
+	return false;	
+}
+function isOwner() {
+	if (SBdata["role"] == "O") {
+		return true;
+	}
+	return false;
 }
