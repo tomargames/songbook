@@ -104,15 +104,15 @@ class Songs(object):
 			return "ERROR"
 	def reviewOnly(self, rev):
 		rev["action"] = 'If this is here, something is wrong'
-		for fld in ["RN", "RL"]:
-			self.songDict[rev["songId"]][fld] = rev[fld]
+		# utils.writeLog(f'reviewOnly, rev is {rev}')
 		try:
-			rc = self.recReview(rev)
+			rc = self.addToTriggerFile(rev)
 			if rc == 'good':
 				rev["action"] = "reviewOnly"
 				# utils.writeLog(f'reviewOnly: wrote review record, now update song {rev["songId"]} dates, rev is {rev}')
-				self.songDict[rev["songId"]]["RL"] = rev["RL"]
-				self.songDict[rev["songId"]]["RN"] = rev["RN"]
+				for fld in ["RN", "RL"]:
+					self.songDict[rev["songId"]][fld] = rev[fld]
+				self.songDict[rev["songId"]]["revNotes"] = self.createReviewNoteRecord(rev)
 				fileName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], 'songBook')		# song file
 				rev["rc"] = utils.saveFile(fileName, self.songDict, True)
 			else:
@@ -121,6 +121,18 @@ class Songs(object):
 			utils.writeLog(f'Exception in reviewOnly: {e}' )
 			rev["action"] = e
 		return rev
+	def createReviewNoteRecord(self, rev):
+		# if note is blank, return list unchanged
+		# if there's a review note, add it to the top of the list 
+		# if no list, initiate it
+		if rev["revNote"] == "": 
+			return self.songDict[rev["songId"]]["revNotes"]
+		elif "revNotes" not in self.songDict[rev["songId"]]:
+			return []
+		else:
+			reviewRec = {"date": str(self.today), "note": rev["revNote"]}
+			self.songDict[rev["songId"]]["revNotes"].insert(0, reviewRec)	
+			return self.songDict[rev["songId"]]["revNotes"]
 	def processInput(self, rev):
 		# utils.writeLog(rev)
 		changeRec = self.newChangeRec()
@@ -144,7 +156,7 @@ class Songs(object):
 			changeRec["TG"].append(t)
 		rev.pop("TG")
 		for f in ['LL', 'SB']:
-			for t in rev[f]:			#each tg item is [action: a/d/e, key: label, new:(a and e only)]
+			for t in rev[f]:	#each tg item is [action: a/d/e, key: label, new:(a and e only)]
 				if t["action"] == "a":
 					self.songDict[rev["songId"]][f][t["key"]] = t["value"]
 				elif t["action"] == "d":
@@ -154,6 +166,7 @@ class Songs(object):
 					self.songDict[rev["songId"]][f][t["key"]] = t["value"]
 				changeRec[f].append(t)
 			rev.pop(f)
+		self.songDict[rev["songId"]]["revNotes"] = self.createReviewNoteRecord(rev)
 		# #validate and save record
 		rev["action"] = 'If this is here, something is wrong'
 		if self.songDict[rev["songId"]]["TT"] == '' or self.songDict[rev["songId"]]["DK"] == '':
@@ -176,7 +189,7 @@ class Songs(object):
 				else:
 					# utils.writeLog(f"writing review record for {rev['songId']}")	
 					try:
-						if self.recReview(rev) != 'good':
+						if self.addToTriggerFile(rev) != 'good':
 							rev["action"] = f'Record saved, error writing review record for {self.songLink(rev["songId"])}' 
 						else:
 							rev["action"] = f'Record saved, due on {self.songDict[rev["songId"]]["RN"]}: {self.songLink(rev["songId"])}'
@@ -228,10 +241,14 @@ class Songs(object):
 				self.config["decks"][self.songDict[c]["DK"]]["inactive"].append(c)
 			elif self.songDict[c]["RN"] <= str(self.today):				#due today
 				self.config["decks"][self.songDict[c]["DK"]]["due"].append(c)
-			if self.rr[0] == "O":		#if user is owner
-				self.dataList.append({"val": f'o{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.songDict[c]["RN"]})  ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+			if self.rr[0] == "O":		#if user is owner, display due date
+				dueDate = f'({self.songDict[c]["RN"]})'
+				if "revNotes" not in self.songDict[c]:
+					self.songDict[c]["revNotes"] = []
 			else:
-				self.dataList.append({"val": f'O{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+				dueDate = ''
+			self.dataList.append({"val": f'O{c}', "desc": f'Song: {self.songDict[c]["TT"]} 	{dueDate}  ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+
 			#for tag filter
 			for t in self.songDict[c]["TG"]:
 				type = t[0:1]
@@ -263,6 +280,9 @@ class Songs(object):
 		rh += f'SBdata["constants"] = {json.dumps(self.constants)}; '
 		rh += f'SBdata["musicConstants"] = {json.dumps(self.musicConstants)}; '
 		rh += f'SBdata["tagData"] = {json.dumps(self.tagJs)}; '
+		# utils.writeLog(f"config: {self.config}")
+		# utils.writeLog(f"constants: {self.constants}")
+		# utils.writeLog(f"tagData: {self.tagJs}")
 		rh += f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; '
 		rh += f'SBdata["roleList"] = {json.dumps(self.roleList)}; '
 		rh += f'SBdata["dataList"] = {json.dumps(self.dataList)}; ' 
@@ -270,6 +290,8 @@ class Songs(object):
 		rh += f'SBdata["nextSongID"] = "{utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)}"; ' 
 		rh += f'SBdata["codeDB"] = {json.dumps(self.codeDB)}; '
 		rh += f'SBdata["chordDB"] = {json.dumps(self.chordDB)}; '
+		# rh += f'var myMetronome = new CallableMetronome(60, 4, metronome); '
+		rh += f'var myMetronome; '
 		rh += '</script>'
 		return rh
 	def configEdit(self):
@@ -441,11 +463,12 @@ class Songs(object):
 			for d in self.config["decks"]:
 				rslt = rslt + self.config["decks"][d]["rev"]
 		elif qType == 'x':				#get due
+			# this returns songs that have been due since indicated date
 			rslt = []
 			sList = []
 			days = int(k)
 			newDate = str(self.today - datetime.timedelta(days))
-			title = f'Songs that have been due since {newDate}: ' 
+			title = f'Review songs due since {newDate}: ' 
 			for s in self.songDict:
 				# if s is in ["due"] for the deck it's in
 				if s in self.config["decks"][self.songDict[s]["DK"]]["due"]:
@@ -476,7 +499,7 @@ class Songs(object):
 		for s in rslt:
 			if s in self.songDict: 
 				resultSet["songs"][s] = self.songDict[s]
-				if not reviewMode:
+				if not reviewMode and "NT" in resultSet["songs"][s]:
 					resultSet["songs"][s].pop("NT")				# remove the chart input field, it will not be needed here
 					try:
 						tm = int(self.songDict[s]["TM"])
@@ -515,24 +538,7 @@ class Songs(object):
 			if len(changeRec[u]) > 0:
 				return True
 		return False
-	def addReviewRecord(self, rec):
-		# utils.writeLog(f"addReviewRecord, rec is {rec}")
-		fName = revs = ''
-		try:
-			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], "reviewTrigger")	
-			if os.path.exists(f'{fName}.json' ):
-				with open(f'{fName}.json' ) as gjson:
-					revs = json.load(gjson)
-			else:
-				revs = []
-			revs.append(rec)
-			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], fName)	
-			rc = utils.saveFile(fName, revs, True)
-		except Exception as e:
-			utils.writeLog(f'ERROR in trigger file recReview: {e}' )
-			rc = 'ERROR'
-		return rc
-	def recReview(self, rev):
+	def addToTriggerFile(self, rev):
 		rev["songTitle"] = self.songDict[rev["songId"]]["TT"]
 		rc = ''
 		try:
@@ -552,6 +558,23 @@ class Songs(object):
 			rc = self.addReviewRecord(rec)
 		except Exception as e:
 			utils.writeLog(f'ERROR in recReview: {e}' )
+		return rc
+	def addReviewRecord(self, rec):
+		# utils.writeLog(f"addReviewRecord, rec is {rec}")
+		fName = revs = ''
+		try:
+			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], "reviewTrigger")	
+			if os.path.exists(f'{fName}.json' ):
+				with open(f'{fName}.json' ) as gjson:
+					revs = json.load(gjson)
+			else:
+				revs = []
+			revs.append(rec)
+			fName = os.path.join(self.root, self.appFolder, 'data', self.rr[1:], fName)	
+			rc = utils.saveFile(fName, revs, True)
+		except Exception as e:
+			utils.writeLog(f'ERROR in trigger file recReview: {e}' )
+			rc = 'ERROR'
 		return rc
 	def updateReviewHistory(self):
 		#read in reviewTrigger file 
@@ -573,50 +596,14 @@ class Songs(object):
 				for r in trigList:
 					songId = r["I"]
 					revDate = r["D"]
-					if "C" in r:
-						changeRec = r["C"]
-					else:
-						changeRec = {}
 					if revDate not in revDateDict:
 						revDateDict[revDate] = []
 					if songId not in revSongDict:
 						revSongDict[songId] = {}
-					# 	# if this is first record for song/date, insert it as is to both files
+						# if this is first record for song/date, insert it as is to both files
 					if revDate not in revSongDict[songId]:				#first review for this song/date
 						revSongDict[songId][revDate] = r
-						revDateDict[revDate].append(songId)
-					else:												#there's a previous review for this song/date
-					### new			old
-					### note		no note			put new note on old record
-					### no note		note			do nothing
-					### no note		no note			do nothing
-					### note		note			combine notes with || separator
-						if "N" in r:				#note on new record
-							if "N" not in revSongDict[songId][revDate]:			#no note on previous review record
-								revSongDict[songId][revDate]["N"] = r["N"]		#add new note to existing record
-							else:												#notes on both records -- combine them
-								newNote = f'{revSongDict[songId][revDate]["N"]} || {r["N"]}' 
-								revSongDict[songId][revDate]["N"] = newNote
-						if "C" in r:										#there's a changeRec on new record
-							if "C" not in revSongDict[songId][revDate]:		#or no changeRec on previous review
-								revSongDict[songId][revDate]["C"] = r["C"]	#add changeRec to existing record
-							else:											#changeRecs on both records -- combine them
-								for fld in ['SB', 'LL', 'TG', 'TT', 'DK']:
-									if len(r["C"][fld]) > 0:				#something new to add
-										if fld in ['SB', 'LL', 'TG']:		#for these fields, just add it to the list
-											revSongDict[songId][revDate]["C"][fld].append((r["C"][fld]))
-										else:								#for these, show old and new fields
-											if len(revSongDict[songId][revDate]["C"][fld]) > 0:
-												#entry [oldvalue, newvalue] - replace the newvalue in the old pair
-												revSongDict[songId][revDate]["C"][fld][1] = r["C"][fld][1]
-											else:
-												revSongDict[songId][revDate]["C"][fld] = r["C"][fld]
-								for fld in self.config["userFields"]:
-									if len(r["C"][fld]) > 0:				#something new to add
-										if len(revSongDict[songId][revDate]["C"][fld]) > 0:
-											revSongDict[songId][revDate]["C"][fld][1] = r["C"][fld][1]
-										else:
-											revSongDict[songId][revDate]["C"][fld] = r["C"][fld]
+					revDateDict[revDate].append(songId)
 					#increment RN field 
 					#calculate avg days between reviews into RA (RL date minus CD date/ RT)
 					firstCal = self.calDate(self.songDict[songId]["CD"])
@@ -625,9 +612,9 @@ class Songs(object):
 					self.songDict[songId]["RT"] = nr
 					d = (lastCal - firstCal).days 
 					self.songDict[songId]["RA"] = round(d/nr, 3)
-				if len(revSongDict) < sizeInSong:							# flag bug where revSongDict shrinks
+				if len(revSongDict) < sizeInSong:			# flag bug where revSongDict shrinks
 					message = f'Not saving file, song file size went from {sizeInSong} to {len(revSongDict)}' 
-				elif len(revDateDict) < sizeInDate:							# flag bug where revDateDict shrinks
+				elif len(revDateDict) < sizeInDate:		# flag bug where revDateDict shrinks
 					message = f'Not saving file, date file size went from {sizeInDate} to {len(revDateDict)}' 
 				else:
 					os.rename(f"{trigFile}", f"{trigFile}.{utils.timeStamp()}")
@@ -642,11 +629,9 @@ class Songs(object):
 			message = 'No updates necessary'
 		return message
 # sb = Songs('106932376942135580175', 'Omarie')
-# test = sb.processInput({'oper': 'E0DK', 'songId': '0DK', 'action': '', 'RN': '2024-03-14', 'revNote': '', 'RL': '2024-03-11', 'type': 'edit', 'TG': [], 'LL': [], 'SB': [], 'TT': 'Missing', 'DK': '0', 'NT': "[KEYI G, KEYO F, TYP V, PTN MT, BPM 130, RES 2, MTR ABBB]\r\n  F                 C            G                     \r\nI called you and it rang for the first time in a year\r\n           F             C         G\r\nyou didn't answer but it felt like change.\r\nF                    C                G                      \r\nPlease don't pick up now -- I'm still so wrapped up in fear; \r\n             F                 C     G\r\nto hear your voice again would be so strange.\r\n[TYP V]\r\n        F                 C            G                         \r\nI'd for-give a friend, of course, if I heard it from the source, \r\n          F                   C              G\r\nbut as it stands, the missing moments matter most.\r\n        F                C             G                       \r\nThrough birthdays and di-vorce, we all dealt with our remorse, \r\n               F                   C            G\r\nand you let it happen with the dis-passion of a ghost.\r\n         F              C               G                         \r\nIt's the hurt of losing touch; it's the hurt that costs too much. \r\n              F      C         G\r\nI've tried to see it from your side.\r\n             F                C       G    \r\nBut damn it, Dan, why did you have to hide?\r\n\r\n\r\n\r\n\r\n\r\n\r\n", 'CS': '3', 'TM': '99'})
-# sb.jsFunctions({})
-# sb = Songs('106932376942135580175', 'Olucas')
-# sb = Songs('106932376942135580175', 'Othoryvo')
-# sb = Songs('106932376942135580175', 'OmarieNme')
-# sb = Songs('106932376942135580175', 'Ochris')
-# sb = Songs('106932376942135580175', 'Omiranda')
+# for s in sb.songDict:
+# 	if "revNotes" in sb.songDict[s]:
+# 		print (f'{s}: {sb.songDict[s]["revNotes"]}')
+# 	else:
+# 		print("none")
 # print("done")

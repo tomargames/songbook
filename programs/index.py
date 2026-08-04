@@ -45,7 +45,7 @@ print(f'''
 <html><head><title>SongBook{title}</title>
 <script src="../../tomar/js/utils.js"></script>
 <script src="../js/songbook.js" async defer></script>
-<script src="../metronome/metronome.js" async defer></script>
+<script src="../js/metronome26.js" defer></script>
 <script src="//cwilso.github.io/AudioContext-MonkeyPatch/AudioContextMonkeyPatch.js"></script>
 <LINK REL='StyleSheet' HREF='../../tomar/js/tomar.css'  TYPE='text/css' TITLE='ToMarStyle' MEDIA='screen'>
 <LINK REL='StyleSheet' HREF='../js/songs.css'  TYPE='text/css' TITLE='ToMarStyle' MEDIA='screen'>
@@ -89,8 +89,7 @@ print(f'''
 </div>
 <dialog id="dialog" style="background-color: #DDD";>
 </dialog>
-''')											#</form is left off, so song input can be added to form
-# utils.writeLog(f"index.py, rr is {rr}, dd is {decks}, device is {device}")
+''')						#</form is left off, so song input can be added to form
 if rr == '':									# if first time in, get from cookie
 	print('''
 		<script>
@@ -117,9 +116,9 @@ else:
 			print(f'admin file error: gid={gid}, rr={rr}, error={e}')
 		else:
 			# utils.writeLog(f'index.py: oper is {oper}')
-			rev = {"oper": oper, "songId": "", "action": ""}
+			rev = {"oper": oper, "songId": "", "action": "", "revNote": []}
 			if oper > '': 				# if there's something in oper, gather form input
-				utils.writeLog(f'1index.py: oper > "", oper is {oper}, rev is {rev}')
+				# utils.writeLog(f'index.py: oper is {oper}, rev is {rev}')
 				if oper[0] == "L":				# this is a user liking/unliking a song, set message in rev
 					# utils.writeLog(f'index.py: oper is L, rev is {rev}')
 					yn = oper[1]
@@ -145,6 +144,7 @@ else:
 					rev["songId"] = oper[1:]
 					for fld in ["RN", "revNote", "RL"]:
 						rev[fld] = form.getvalue(fld,'')
+						# utils.writeLog(f'field is {fld}, value is {rev[fld]}')
 						if type(rev[fld]) is list:
 							rev[fld] = rev[fld][0]
 					if oper[0] == 'S':
@@ -153,7 +153,7 @@ else:
 						except Exception as e:
 							print(f'error writing review record: {e}')
 					elif oper[0] == 'E':
-						utils.writeLog(f'2index.py: oper > "", oper is {oper}, rev is {rev}')
+						# utils.writeLog(f'2index.py: oper > "", oper is {oper}, rev is {rev}')
 						rev["type"] = "edit"
 						# tags and links don't get copied to input fields on a copy, so if it's a copy, do it here
 						rev["TG"] = []
