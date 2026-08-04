@@ -58,6 +58,7 @@
   "icons": {
     "chart": "📈",
     "edit": "📝",
+    "list": "📃",
     "schedule": "📆",
     "link": "🔗",
     "media": "🖇️",
@@ -78,7 +79,8 @@
     "stop": "🛑",
     "save": "💾",
     "wand": "🪄",
-    "like": "👍"
+    "like": "👍",
+    "home": "🛖"
   },
   "metronomeNoteResolution": {
     "0": "Sixteenth Notes",
@@ -108,4 +110,3 @@
       ]
   }
 }
-

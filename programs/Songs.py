@@ -134,7 +134,7 @@ class Songs(object):
 			self.songDict[rev["songId"]]["revNotes"].insert(0, reviewRec)	
 			return self.songDict[rev["songId"]]["revNotes"]
 	def processInput(self, rev):
-		utils.writeLog(rev)
+		# utils.writeLog(rev)
 		changeRec = self.newChangeRec()
 		if rev["type"] in ["add", "copy"]:
 			self.songDict[rev["songId"]] = self.newSongCard()
@@ -241,12 +241,14 @@ class Songs(object):
 				self.config["decks"][self.songDict[c]["DK"]]["inactive"].append(c)
 			elif self.songDict[c]["RN"] <= str(self.today):				#due today
 				self.config["decks"][self.songDict[c]["DK"]]["due"].append(c)
-			if self.rr[0] == "O":		#if user is owner - find out what this is doing
-				self.dataList.append({"val": f'I{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.songDict[c]["RN"]})  ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+			if self.rr[0] == "O":		#if user is owner, display due date
+				dueDate = f'({self.songDict[c]["RN"]})'
 				if "revNotes" not in self.songDict[c]:
 					self.songDict[c]["revNotes"] = []
 			else:
-				self.dataList.append({"val": f'O{c}', "desc": f'Song: {self.songDict[c]["TT"]} ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+				dueDate = ''
+			self.dataList.append({"val": f'O{c}', "desc": f'Song: {self.songDict[c]["TT"]} 	{dueDate}  ({self.config["decks"][self.songDict[c]["DK"]]["name"]})'})
+
 			#for tag filter
 			for t in self.songDict[c]["TG"]:
 				type = t[0:1]
@@ -278,6 +280,9 @@ class Songs(object):
 		rh += f'SBdata["constants"] = {json.dumps(self.constants)}; '
 		rh += f'SBdata["musicConstants"] = {json.dumps(self.musicConstants)}; '
 		rh += f'SBdata["tagData"] = {json.dumps(self.tagJs)}; '
+		# utils.writeLog(f"config: {self.config}")
+		# utils.writeLog(f"constants: {self.constants}")
+		# utils.writeLog(f"tagData: {self.tagJs}")
 		rh += f'SBdata["userName"] = "S{self.appUsers[self.user]["N"][0:3]}{self.user[-3:]}"; '
 		rh += f'SBdata["roleList"] = {json.dumps(self.roleList)}; '
 		rh += f'SBdata["dataList"] = {json.dumps(self.dataList)}; ' 
@@ -285,6 +290,8 @@ class Songs(object):
 		rh += f'SBdata["nextSongID"] = "{utils.formatNumber(utils.baseConvert(len(self.songDict), 32), 3)}"; ' 
 		rh += f'SBdata["codeDB"] = {json.dumps(self.codeDB)}; '
 		rh += f'SBdata["chordDB"] = {json.dumps(self.chordDB)}; '
+		# rh += f'var myMetronome = new CallableMetronome(60, 4, metronome); '
+		rh += f'var myMetronome; '
 		rh += '</script>'
 		return rh
 	def configEdit(self):
@@ -456,11 +463,12 @@ class Songs(object):
 			for d in self.config["decks"]:
 				rslt = rslt + self.config["decks"][d]["rev"]
 		elif qType == 'x':				#get due
+			# this returns songs that have been due since indicated date
 			rslt = []
 			sList = []
 			days = int(k)
 			newDate = str(self.today - datetime.timedelta(days))
-			title = f'Songs that have been due since {newDate}: ' 
+			title = f'Review songs due since {newDate}: ' 
 			for s in self.songDict:
 				# if s is in ["due"] for the deck it's in
 				if s in self.config["decks"][self.songDict[s]["DK"]]["due"]:
@@ -588,18 +596,11 @@ class Songs(object):
 				for r in trigList:
 					songId = r["I"]
 					revDate = r["D"]
-					if "C" in r:
-						changeRec = r["C"]
-					else:
-						changeRec = {}
 					if revDate not in revDateDict:
 						revDateDict[revDate] = []
 					if songId not in revSongDict:
 						revSongDict[songId] = {}
-					# make a record to insert at the top of revNotes if there is one
-					if "N" in r: 
-						self.songDict[songId]["revNotes"].insert(0, {"date": str(self.today), "note": r["N"]})
-					# 	# if this is first record for song/date, insert it as is to both files
+						# if this is first record for song/date, insert it as is to both files
 					if revDate not in revSongDict[songId]:				#first review for this song/date
 						revSongDict[songId][revDate] = r
 					revDateDict[revDate].append(songId)
